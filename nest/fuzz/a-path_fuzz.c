@@ -58,7 +58,6 @@ fuzz_path_format( uint8_t *data, size_t size)
   if (size < 4 || size > 252) {
     return -1;
   }
-
   struct adata empty_as_path = {};
   struct adata *as_path = &empty_as_path; 
 
@@ -85,4 +84,75 @@ fuzz_path_format( uint8_t *data, size_t size)
   tmp_flush();
 
   return 1;
+}
+
+static int
+count_asn_in_array(const u32 *array, u32 asn)
+{
+  int counts_of_contains = 0;
+  int u;
+  for (u = 0; u < AS_PATH_LENGTH; u++)
+    if (array[u] == asn)
+	counts_of_contains++;
+  return counts_of_contains;
+}
+
+int 
+fuzz_path_include(uint8_t *data, size_t size) {
+  struct adata empty_as_path = {};
+  struct adata *as_path = &empty_as_path;
+
+  u32 as_nums[AS_PATH_LENGTH] = {};
+  int i;
+  
+  if (size < AS_PATH_LENGTH * sizeof(u32)) {
+    return -1;
+  }
+
+  for (i = 0; i < AS_PATH_LENGTH; i++)
+  {
+    u32 val;
+    for (int j = 0; j < 4; j++) {
+      val = (val << 8) | data[i * 4 + j];
+    }
+    as_nums[i] = val;
+    as_path = as_path_prepend(tmp_linpool, as_path, val);
+  }
+
+
+  for (i = 0; i < AS_PATH_LENGTH; i++)
+  {
+    int counts_of_contains = count_asn_in_array(as_nums, as_nums[i]);
+    if (!as_path_contains(as_path, as_nums[i], counts_of_contains)) {
+      __builtin_trap();  
+    }
+
+    struct f_val v = { .type = T_INT, .val.i = as_nums[i] };
+    if (as_path_filter(tmp_linpool, as_path, &v, 0) == NULL) {
+      __builtin_trap();  
+    }
+    if (as_path_filter(tmp_linpool, as_path, &v, 1) == NULL) {
+      __builtin_trap();
+    }
+  }
+
+  for (i = 0; i < 10000; i++)
+  {
+    u32 test_val = i;
+    int counts_of_contains = count_asn_in_array(as_nums, test_val);
+    int result = as_path_contains(as_path, test_val, (counts_of_contains == 0 ? 1 : counts_of_contains));
+
+    if (counts_of_contains) {
+      if (!result) {
+        __builtin_trap();
+      }
+    } else {
+      if (result != 0) {
+        __builtin_trap();
+      }
+    }
+  }
+
+  tmp_flush();
+  return 0;
 }
