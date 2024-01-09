@@ -1,99 +1,6 @@
 #include "nest/cbor_cmds.c"
+#include "nest/cbor_parse_tools.h"
 
-enum functions {
-  SHOW_STATUS = 0,
-  SHOW_MEMORY = 1,
-  SHOW_SYMBOLS = 2,
-  SHOW_OSPF = 3,
-};
-
-enum cbor_majors {
-  UINT = 0,
-  NEG_INT = 1,
-  BYTE_STR = 2,
-  TEXT = 3,
-  ARRAY = 4,
-  BLOCK = 5,
-  TAG = 6,
-  FLOAT = 7,
-};
-
-
-struct value {
- int major;
- int64_t val;
-};
-
-struct buff_reader {
-  byte *buff;
-  uint pt;
-  uint size;
-};
-
-
-uint compare_buff_str(struct buff_reader *buf_read, uint length, char *string) {
-  if (length != strlen(string)) {
-    return 0;
-  }
-  for (size_t i = 0; i < strlen(string); i++) {
-    if (buf_read->buff[i+buf_read->pt]!=string[i]) {
-      return 0;
-    }
-  }
-  return 1;
-};
-
-struct value
-get_value(struct buff_reader *reader)
-{
-  struct value val;
-  byte *buff = reader->buff;
-  val.major = buff[reader->pt]>>5;
-  int first_byte_val = buff[reader->pt] - (val.major<<5);
-  if (first_byte_val <=23) {
-    val.val = first_byte_val;
-    reader->pt++;
-  } else if (first_byte_val == 0x18)
-  {
-    val.val = buff[reader->pt+1];
-    reader->pt+=2;
-  } else if (first_byte_val == 0x19)
-  {
-    val.val = buff[reader->pt+1];
-    val.val = val.val << 8;
-    val.val += buff[reader->pt+2];
-    reader->pt += 3;
-  } else if (first_byte_val == 0x1a)
-  {
-    val.val = 0;
-    for (int i = 1; i < 4; i++)
-    {
-      val.val += buff[reader->pt+i];
-      val.val = val.val << 8;
-    }
-    val.val += buff[reader->pt+4];
-    reader->pt+=5;
-  } else if (first_byte_val == 0x1b)
-  {
-    for(int i = 1; i < 8; i++) {
-      val.val += buff[reader->pt+i];
-      val.val = val.val << 8;
-    }
-    val.val += buff[reader->pt+8];
-    reader->pt+=9;
-  } else if (first_byte_val == 0x1f)
-  {
-    val.val = -1;
-    reader->pt++;
-  }
-  return val;
-}
-
-
-int val_is_break(struct value val)
-{
-  return val.major == FLOAT && val.val == -1; // break code is 0xff, so the major is same for float and break
-}
 
 void skip_optional_args(struct buff_reader *rbuf_read, int items_in_block)
 {
@@ -232,6 +139,10 @@ do_command(struct buff_reader *rbuf_read, struct buff_reader *tbuf_read, int ite
       args = parse_arguments(rbuf_read, items_in_block, lp);
       log("args %i, pt %i", args, args->pt);
       return cmd_show_ospf_cbor(tbuf_read->buff, tbuf_read->size, args, lp);
+    case SHOW_PROTOCOLS:
+      args = parse_arguments(rbuf_read, items_in_block, lp);
+      log("args %i, pt %i", args, args->pt);
+      return cmd_show_protocols_cbor(tbuf_read->buff, tbuf_read->size, args, lp);
     default:
       bug("command %li not found", val.val);
       return 0;

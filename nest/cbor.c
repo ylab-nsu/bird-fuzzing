@@ -74,7 +74,7 @@ void cbor_add_ipv4(struct cbor_writer *writer, uint32_t addr)
 void cbor_add_ipv6(struct cbor_writer *writer, uint32_t addr[4])
 {
   write_item(writer, 6, 54); // 6 is TAG, 54 is tag number for ipv6
-  write_item(writer, 2, 16); // bytestring of length 8
+  write_item(writer, 2, 16); // bytestring of length 16
   for (int j = 0; j < 4; j++)
   {
     for (int i = 3; i>=0; i--)

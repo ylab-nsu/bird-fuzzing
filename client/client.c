@@ -234,6 +234,16 @@ make_cmd_cbor(char *cmd_buffer)
       lp_flush(lp);
       return;
     }
+    else if (compare_string(&cmd_buffer[buf_pt], l, "protocols"))
+    {
+      printf("protocols\n");
+      cbor_string_int(w, "command", SHOW_PROTOCOLS);
+      write_args_cbor(&cmd_buffer[buf_pt + strlen("protocols")], w);
+      cbor_close_block_or_list(w);
+      server_send_byte(cbor_buf, w->pt);
+      lp_flush(lp);
+      return;
+    }
     else
     {
       printf("this command is not implemented yet\n");

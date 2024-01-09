@@ -1,4 +1,4 @@
-src := cbor.c cbor_shortcuts.c
+src := cbor.c cbor_shortcuts.c cbor_parse_tools.c
 obj := $(src-o-files)
 $(all-client)
 

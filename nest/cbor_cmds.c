@@ -10,6 +10,10 @@
 #include "proto/ospf/ospf_for_cbor.c"
 
 
+int64_t preprocess_time(btime t) {
+  return tm_get_real_time(t) TO_S ;
+}
+
 uint compare_byte_str(byte *str1, uint length, const char *str2) {
   if (length != strlen(str2)) {
     return 0;
@@ -36,7 +40,7 @@ proto_state_name_stolen_for_cbor(struct proto *p)
   }
 }
 
-void
+uint
 cmd_show_protocols_cbor(byte *tbuf, uint capacity, struct arg_list *args, struct linpool *lp)
 {
   log("in cmd_show_protocols_cbor");
@@ -44,7 +48,7 @@ cmd_show_protocols_cbor(byte *tbuf, uint capacity, struct arg_list *args, struct
   cbor_open_block_with_length(w, 1);
   
   cbor_add_string(w, "show_protocols:message");
-  cbor_open_block_with_length(w, 2);
+  cbor_open_block_with_length(w, 1);
   cbor_add_string(w, "table");
   cbor_open_list(w);
   int all = 0;
@@ -84,7 +88,7 @@ cmd_show_protocols_cbor(byte *tbuf, uint capacity, struct arg_list *args, struct
         if (p->message)
           cbor_string_string(w, "message", p->message);
         if (p->cf->router_id)
-          cbor_string_int(w, "router_id", p->cf->router_id);
+          cbor_string_ipv4(w, "router_id", p->cf->router_id);
         if (p->vrf_set)
           cbor_string_string(w, "vrf", p->vrf ? p->vrf->name : "default");
 
@@ -94,13 +98,15 @@ cmd_show_protocols_cbor(byte *tbuf, uint capacity, struct arg_list *args, struct
         {
           struct channel *c;
           WALK_LIST(c, p->channels)
-	    channel_show_info(c);
+	    channel_show_info_cbor(w, c);
         }
       }
       cbor_close_block_or_list(w);
     }
   }
   cbor_close_block_or_list(w);
+  cbor_write_to_file(w, "show_protocol_first_try.cbor");
+  return w->pt;
 }
 
 extern pool *rt_table_pool;

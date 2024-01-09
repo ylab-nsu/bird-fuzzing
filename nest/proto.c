@@ -2144,6 +2144,7 @@ channel_show_info_cbor(struct cbor_writer *w, struct channel *c)
   cbor_open_block(w);
   cbor_string_string(w, "name", c->name);
   cbor_string_string(w, "state", c_states[c->channel_state]);
+  cbor_string_string(w, "table", c->table->name);
   cbor_string_int(w, "preference", c->preference);
   cbor_string_string(w, "input_filter", filter_name(c->in_filter));
   cbor_string_string(w, "output_filter", filter_name(c->out_filter));
@@ -2160,6 +2161,7 @@ channel_show_info_cbor(struct cbor_writer *w, struct channel *c)
 
   if (c->channel_state != CS_DOWN)
     channel_show_stats_cbor(w, c);
+  cbor_close_block_or_list(w);
 }
 
 void
