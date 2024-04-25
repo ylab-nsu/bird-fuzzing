@@ -27,42 +27,37 @@ show_lsa_router_cbor(struct cbor_writer *w, struct ospf_proto *p, struct top_has
   cbor_string_ipv4(w, "router", he->lsa.rt);
   show_lsa_distance_cbor(w, he);
 
-  cbor_add_string(w, "vlink");
+  cbor_add_string(w, "rt");
   cbor_open_list(w);
   lsa_walk_rt_init(p, he, &rtl);
-  while (lsa_walk_rt(&rtl))
-  {
-    if (rtl.type == LSART_VLNK)
-    {
-      cbor_open_block_with_length(w, 2);
-      cbor_string_ipv4(w, "vlink", rtl.id);
-      cbor_string_int(w, "metric", rtl.metric);
-    }
-  }
-  cbor_close_block_or_list(w);
-
-  cbor_add_string(w, "router_metric");
-  cbor_open_list(w);
-  lsa_walk_rt_init(p, he, &rtl);
-  while (lsa_walk_rt(&rtl))
-  {
-    if (rtl.type == LSART_PTP)
-    {
-      cbor_open_block_with_length(w, 2);
-      cbor_string_ipv4(w, "router", rtl.id);
-      cbor_string_int(w, "metric", rtl.metric);
-    }
-  }
-  cbor_close_block_or_list(w);
-
-  cbor_add_string(w, "network");
-  cbor_open_list(w);
-  lsa_walk_rt_init(p, he, &rtl);
+  
   int dummy_id = 0;
   while (lsa_walk_rt(&rtl))
   {
-    if (rtl.type == LSART_NET)
+    cbor_open_block(w);
+    cbor_string_int(spitw, "dummy_id", i);
+    dummy_id++;
+    cbor_string_int(w, "metric", rtl.metric);
+    switch (rtl.type)
+    case (LSART_VLNK)
     {
+      cbor_add_string(w, "vlink");
+      cbor_open_block_with_length(w, 1);
+      cbor_string_ipv4(w, "vlink", rtl.id);
+      break;
+    }
+  
+    case (LSART_PTP)
+    {
+      cbor_add_string(w, "router_metric");
+      cbor_open_block_with_length(w, 1);
+      cbor_string_ipv4(w, "router", rtl.id);
+      break;
+    }
+
+    case (LSART_NET)
+    {
+      cbor_add_string(w, "network");
       if (ospf_is_v2(p))
       {
 	/* In OSPFv2, we try to find network-LSA to get prefix/pxlen */
@@ -73,50 +68,37 @@ show_lsa_router_cbor(struct cbor_writer *w, struct ospf_proto *p, struct top_has
 	  struct ospf_lsa_header *net_lsa = &(net_he->lsa);
 	  struct ospf_lsa_net *net_ln = net_he->lsa_body;
 
-          cbor_open_block_with_length(w, 4);
-          cbor_string_int(w, "dummy_yang_id", dummy_id);
+          cbor_open_block_with_length(w, 2);
           cbor_string_ipv4(w, "network", net_lsa->id & net_ln->optx);
           cbor_string_int(w, "len", u32_masklen(net_ln->optx));
-          cbor_string_int(w, "metric", rtl.metric);
 	}
 	else
 	{
-	  cbor_open_block_with_length(w, 3);
-	  cbor_string_int(w, "dummy_yang_id", dummy_id);
+	  cbor_open_block_with_length(w, 1);
           cbor_string_ipv4(w, "network", rtl.id);
-          cbor_string_int(w, "metric", rtl.metric);
         }
       }
       else
       {
-        cbor_open_block_with_length(w, 4);
-        cbor_string_int(w, "dummy_yang_id", dummy_id);
+        cbor_open_block_with_length(w, 2);
         cbor_string_ipv4(w, "network", rtl.id);
         cbor_string_int(w, "nif", rtl.nif);
-        cbor_string_int(w, "metric", rtl.metric);
       }
+      break;
     }
-    dummy_id++;
-  }
-  cbor_close_block_or_list(w);
-
-  if (ospf_is_v2(p) && verbose)
-  {
-    cbor_add_string(w, "stubnet");
-    cbor_open_list(w);
-    lsa_walk_rt_init(p, he, &rtl);
-    while (lsa_walk_rt(&rtl))
+    case (LSART_STUB)
     {
-      if (rtl.type == LSART_STUB)
+      if (ospf_is_v2(p) && verbose)
       {
-        cbor_open_block_with_length(w, 3);
+        cbor_add_string(w, "stubnet");
+        cbor_open_block_with_length(w, 2);
         cbor_string_ipv4(w, "stubnet", rtl.id);
         cbor_string_int(w, "len", u32_masklen(rtl.data));
-        cbor_string_int(w, "metric", rtl.metric);
       }
     }
     cbor_close_block_or_list(w);
   }
+  cbor_close_block_or_list(w);
   cbor_close_block_or_list(w);
 }
 
@@ -407,7 +389,6 @@ ext_compare_for_state_cbor(const void *p1, const void *p2)
   return lsa1->sn - lsa2->sn;
 }
 
-
 void
 ospf_sh_state_cbor(struct cbor_writer *w, struct proto *P, int verbose, int reachable)
 {
@@ -433,99 +414,16 @@ ospf_sh_state_cbor(struct cbor_writer *w, struct proto *P, int verbose, int reac
   struct top_hash_entry *he;
   struct top_hash_entry *cnode = NULL;
 
-  j1 = jx = 0;
+  int i = 0;
   WALK_SLIST(he, p->lsal)
   {
-    int accept;
-
-    if (he->lsa.age == LSA_MAXAGE)
-      continue;
-
-    switch (he->lsa_type)
-    {
-    case LSA_T_RT:
-    case LSA_T_NET:
-      accept = 1;
-      break;
-
-    case LSA_T_SUM_NET:
-    case LSA_T_SUM_RT:
-    case LSA_T_NSSA:
-    case LSA_T_PREFIX:
-      accept = verbose;
-      break;
-
-    case LSA_T_EXT:
-      if (verbose)
-      {
-	he->domain = 1; /* Abuse domain field to mark the LSA */
-	hex[jx++] = he;
-      }
-      /* fallthrough */
-    default:
-      accept = 0;
-    }
-
-    if (accept)
-      hea[j1++] = he;
-  }
-
-  ASSERT(j1 <= num && jx <= num);
-
-  lsa_compare_ospf3_cbor = !ospf2;
-  qsort(hea, j1, sizeof(struct top_hash_entry *), lsa_compare_for_state_cbor);
-
-  if (verbose)
-    qsort(hex, jx, sizeof(struct top_hash_entry *), ext_compare_for_state_cbor);
-
-  /*
-   * This code is a bit tricky, we have a primary LSAs (router and
-   * network) that are presented as a node, and secondary LSAs that
-   * are presented as a part of a primary node. cnode represents an
-   * currently opened node (whose header was presented). The LSAs are
-   * sorted to get secondary LSAs just after related primary LSA (if
-   * available). We present secondary LSAs only when related primary
-   * LSA is opened.
-   *
-   * AS-external LSAs are stored separately as they might be presented
-   * several times (for each area when related ASBR is opened). When
-   * the node is closed, related external routes are presented. We
-   * also have to take into account that in OSPFv3, there might be
-   * more router-LSAs and only the first should be considered as a
-   * primary. This is handled by not closing old router-LSA when next
-   * one is processed (which is not opened because there is already
-   * one opened).
-   */
-
-  cbor_add_string(w, "areas");
-  cbor_open_list_with_length(w, j1);
-  ix = 0;
-  for (i = 0; i < j1; i++)
-  {
+    cbor_add_string(w, "areas");
+    cbor_open_list_with_length(w, j1);
+    
     cbor_open_block(w);
     cbor_string_int(w, "dummy_yang_id", i);
-    he = hea[i];
-
-    /* If there is no opened node, we open the LSA (if appropriate) or skip to the next one */
-    if (!cnode)
-    {
-      if (((he->lsa_type == LSA_T_RT) || (he->lsa_type == LSA_T_NET))
-	  && ((he->color == INSPF) || !reachable))
-      {
-	cnode = he;
-
-	if (he->domain != last_area)
-	{
-	  cbor_string_ipv4(w, "area", he->domain);
-	  last_area = he->domain;
-	  ix = 0;
-	}
-      }
-      else
-	continue;
-    }
-
-    ASSERT(cnode && (he->domain == last_area) && (he->lsa.rt == cnode->lsa.rt));
+    i++;
+    cbor_string_ipv4(w, "area", he->domain);
 
     switch (he->lsa_type)
     {
@@ -558,45 +456,16 @@ ospf_sh_state_cbor(struct cbor_writer *w, struct proto *P, int verbose, int reac
       break;
     }
 
-    /* In these cases, we close the current node */
-    if ((i+1 == j1)
-	|| (hea[i+1]->domain != last_area)
-	|| (hea[i+1]->lsa.rt != cnode->lsa.rt)
-	|| (hea[i+1]->lsa_type == LSA_T_NET))
-    {
-      while ((ix < jx) && (hex[ix]->lsa.rt < cnode->lsa.rt))
-	ix++;
-
-      while ((ix < jx) && (hex[ix]->lsa.rt == cnode->lsa.rt))
-	show_lsa_external_cbor(w, hex[ix++], ospf2, af);
-
-      cnode = NULL;
-    }
-    cbor_close_block_or_list(w);
-  }
-  int hdr = 0;
-  u32 last_rt = 0xFFFFFFFF;
-  cbor_add_string(w, "asbrs");
-  cbor_open_list(w);
-  for (ix = 0; ix < jx; ix++)
-  {
-    he = hex[ix];
-    /* If it is still marked, we show it now. */
+    u32 last_rt = 0xFFFFFFFF;
     if (he->domain)
     {
-      cbor_open_block(w);
-
       he->domain = 0;
 
       if ((he->color != INSPF) && reachable)
 	continue;
 
-      if (!hdr)
-      {
-	cbor_add_string(w, "other_ASBRs");
-	cbor_open_list_with_length(w, 0);
-	hdr = 1;
-      }
+      cbor_add_string(w, "other_ASBR");
+      cbor_open_block(w);
 
       if (he->lsa.rt != last_rt)
       {
