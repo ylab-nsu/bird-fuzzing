@@ -201,6 +201,9 @@ void log_rl(struct tbf *rl, const char *msg, ...);
 void die(const char *msg, ...) NORET;
 void bug(const char *msg, ...) NORET;
 
+void set_daemon_name(char *path, char *def);
+
+
 #define L_DEBUG "\001"			/* Debugging messages */
 #define L_TRACE "\002"			/* Protocol tracing */
 #define L_INFO "\003"			/* Informational messages */
