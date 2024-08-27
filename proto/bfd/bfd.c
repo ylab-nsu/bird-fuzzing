@@ -1239,7 +1239,7 @@ bfd_show_session(struct bfd_session *s, int details)
   byte tbuf[TM_DATETIME_BUFFER_SIZE];
 
   rcu_read_lock();
-  struct global_runtime *gr = atomic_load_explicit(&global_runtime, memory_order_relaxed);
+  union bird_global_runtime *gr = BIRD_GLOBAL_RUNTIME;
   tm_format_time(tbuf, &gr->tf_proto, s->last_state_change);
   rcu_read_unlock();
 

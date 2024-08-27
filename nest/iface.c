@@ -165,7 +165,7 @@ if_dump_all(void)
   IFACE_WALK(i)
     if_dump(i);
   rcu_read_lock();
-  debug("Router ID: %08x\n", atomic_load_explicit(&global_runtime, memory_order_relaxed)->router_id);
+  debug("Router ID: %08x\n", BIRD_GLOBAL_RUNTIME->router_id);
   rcu_read_unlock();
 }
 

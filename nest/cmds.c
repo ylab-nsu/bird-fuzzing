@@ -25,7 +25,7 @@ cmd_show_status(void)
   byte tim[TM_DATETIME_BUFFER_SIZE];
 
   rcu_read_lock();
-  struct global_runtime *gr = atomic_load_explicit(&global_runtime, memory_order_acquire);
+  union bird_global_runtime *gr = BIRD_GLOBAL_RUNTIME;
   struct timeformat *tf = &gr->tf_base;
 
   cli_msg(-1000, "BIRD " BIRD_VERSION);

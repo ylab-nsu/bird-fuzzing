@@ -1671,7 +1671,7 @@ protos_do_commit(struct config *new, struct config *old, int type)
      global_commit() because it is postponed after start of device protocol */
   if ((phase == PROTOCOL_STARTUP_NECESSARY) && !old)
   {
-    struct global_runtime *gr = atomic_load_explicit(&global_runtime, memory_order_relaxed);
+    union bird_global_runtime *gr = BIRD_GLOBAL_RUNTIME;
     if (!gr->router_id)
     {
       gr->router_id = if_choose_router_id(new->router_id_from, 0);
@@ -1830,7 +1830,7 @@ graceful_restart_init(void)
 
   graceful_restart_state = GRS_ACTIVE;
   gr_wait_timer = tm_new_init(proto_pool, graceful_restart_done, NULL, 0, 0);
-  u32 gr_wait = atomic_load_explicit(&global_runtime, memory_order_relaxed)->gr_wait;
+  u32 gr_wait = BIRD_GLOBAL_RUNTIME->gr_wait;
   tm_start(gr_wait_timer, gr_wait S);
 }
 
@@ -1884,7 +1884,7 @@ graceful_restart_show_status(void)
   cli_msg(-24, "Graceful restart recovery in progress");
   cli_msg(-24, "  Waiting for %d channels to recover", graceful_restart_locks);
   cli_msg(-24, "  Wait timer is %t/%u", tm_remains(gr_wait_timer),
-      atomic_load_explicit(&global_runtime, memory_order_relaxed)->gr_wait);
+      BIRD_GLOBAL_RUNTIME->gr_wait);
 }
 
 /**
@@ -2472,7 +2472,7 @@ proto_cmd_show(struct proto *p, uintptr_t verbose, int cnt)
     p->proto->get_status(p, buf);
 
   rcu_read_lock();
-  tm_format_time(tbuf, &atomic_load_explicit(&global_runtime, memory_order_acquire)->tf_proto, p->last_state_change);
+  tm_format_time(tbuf, &BIRD_GLOBAL_RUNTIME->tf_proto, p->last_state_change);
   rcu_read_unlock();
   cli_msg(-1002, "%-10s %-10s %-10s %-6s %-12s  %s",
 	  p->name,
