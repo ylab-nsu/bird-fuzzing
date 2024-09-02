@@ -1101,6 +1101,8 @@ nl_parse_link(struct nlmsghdr *h, int scan)
       if (kind && !strcmp(kind, "vrf"))
 	f.flags |= IF_VRF;
 
+      f.cf = kif_get_iface_config(&f);
+
       ifi = if_update(&f);
 
       if (!scan)
@@ -1354,6 +1356,8 @@ kif_do_scan(struct kif_proto *p UNUSED)
 
       if (f.master != i->master)
       {
+	f.cf = kif_get_iface_config(&f);
+
 	memcpy(f.name, i->name, sizeof(f.name));
 	if_update_locked(&f);
       }
@@ -2223,10 +2227,4 @@ kif_sys_start(struct kif_proto *p UNUSED)
 void
 kif_sys_shutdown(struct kif_proto *p UNUSED)
 {
-}
-
-int
-kif_update_sysdep_addr(struct iface *i UNUSED)
-{
-  return 0;
 }
