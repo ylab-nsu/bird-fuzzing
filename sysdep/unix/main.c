@@ -203,12 +203,13 @@ sysdep_preconfig(struct config *c)
 }
 
 void
-sysdep_commit(struct config *new, struct config *old)
+sysdep_commit(struct config *new, struct config *old UNUSED)
 {
   if (!new->shutdown)
+  {
     log_switch(0, &new->logfiles, new->syslog_name);
-
-  bird_thread_commit(new, old);
+    bird_thread_commit(&new->threads);
+  }
 }
 
 static int
