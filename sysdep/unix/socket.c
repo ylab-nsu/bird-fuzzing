@@ -895,6 +895,9 @@ sk_setup(sock *s)
 static void
 sk_err_hook(sock *s, int e)
 {
+  if (s->rx_paused)
+    CALL(s->err_paused, s, e);
+
   s->err_hook(s, e);
 }
 
