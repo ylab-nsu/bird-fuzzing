@@ -25,6 +25,9 @@ char *mb_vsprintf(pool *p, const char *fmt, va_list args);
 char *lp_sprintf(linpool *p, const char *fmt, ...);
 char *lp_vsprintf(linpool *p, const char *fmt, va_list args);
 
+#define tmp_sprintf(...)  lp_sprintf(tmp_linpool, __VA_ARGS__)
+#define tmp_vsprintf(...)  lp_vsprintf(tmp_linpool, __VA_ARGS__)
+
 int buffer_vprint(buffer *buf, const char *fmt, va_list args);
 int buffer_print(buffer *buf, const char *fmt, ...);
 void buffer_puts(buffer *buf, const char *str);
@@ -61,6 +64,8 @@ lp_strdup(linpool *lp, const char *c)
   memcpy(z, c, l);
   return z;
 }
+
+#define tmp_strdup(x) lp_strdup(tmp_linpool, (x))
 
 static inline char *
 mb_strdup(pool *p, const char *c)
