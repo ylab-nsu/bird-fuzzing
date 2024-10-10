@@ -74,6 +74,9 @@ typedef struct birdsock {
   uint lifindex;			/* local interface that received the datagram */
   /* laddr and lifindex are valid only if SKF_LADDR_RX flag is set to request it */
 
+  /* Filedescriptors to send/receive (UNIX) */
+  int rxfd, txfd;
+
   int af;				/* System-dependend adress family (e.g. AF_INET) */
   int fd;				/* System-dependent data */
   int index;				/* Index in poll buffer */
@@ -143,6 +146,9 @@ extern int sk_priority_control;		/* Suggested priority for control traffic, shou
 #define SKF_HDRINCL	0x400	/* Used internally */
 #define SKF_PKTINFO	0x800	/* Used internally */
 
+#define SKF_FD_RX	0x1000	/* Allow receiving filedescriptors (unix sockets) */
+#define SKF_FD_TX	0x2000	/* Allow sending filedescriptors (unix sockets) */
+
 /*
  *	Socket types		     SA SP DA DP IF  TTL SendTo	(?=may, -=must not, *=must)
  */
@@ -157,6 +163,7 @@ extern int sk_priority_control;		/* Suggested priority for control traffic, shou
 #define SK_UNIX		9
 #define SK_SSH_ACTIVE	10         /* -  -  *  *  -  ?   -	DA = host */
 #define SK_SSH		11
+#define SK_UNIX_MSG	12	   /* Like SK_UNIX but using sendmsg and recvmsg */
 
 /*
  *	Socket subtypes
