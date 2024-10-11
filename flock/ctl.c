@@ -27,11 +27,11 @@ struct hcs_parser_stream {
   u64 bytes_consumed;
   u64 major_state;
 
-  struct cbor_stream stream;
+  CBOR_STREAM_EMBED(stream, 4);
 };
 
 struct hcs_parser_channel {
-  struct cbor_channel cch;
+  CBOR_CHANNEL_EMBED(cch, 4);
   struct hcs_parser_stream *htx;
 
   enum {
@@ -58,18 +58,18 @@ hcs_request_poweroff(struct hcs_parser_channel *hpc)
       cbor_put_string(cw, "OK");
     }
 
-  cbor_done_channel(&hpc->cch);
+  cbor_channel_done(&hpc->cch);
 }
 
 struct hcs_parser_stream *
 hcs_parser_init(sock *s)
 {
-  struct cbor_parser_context *ctx = cbor_parser_new(s->pool, 4);
   struct hcs_parser_stream *htx = mb_allocz(s->pool, sizeof *htx);
 
-  htx->ctx = ctx;
-  htx->sock = s;
-  cbor_stream_init(&htx->stream, 3);
+  CBOR_STREAM_INIT(htx, stream, cch, s->pool, struct hcs_parser_channel);
+  cbor_stream_attach(&htx->stream, s);
+  htx->stream.parse = hcs_parse;
+  htx->stream.cancel = hcs_parser_cleanup;
 
   return htx;
 }

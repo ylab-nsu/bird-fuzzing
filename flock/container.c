@@ -21,7 +21,7 @@
 static struct hypervisor_container_forker {
   sock *s;
   pool *p;
-  struct cbor_stream stream;
+  CBOR_STREAM_EMBED(stream, 4);
   struct birdloop *loop;
   HASH(struct container_runtime) hash;
   struct container_runtime *cur_crt;
@@ -29,7 +29,7 @@ static struct hypervisor_container_forker {
 } hcf;
 
 struct container_fork_request {
-  struct cbor_channel cch;
+  CBOR_CHANNEL_EMBED(cch, 4);
   struct cbor_channel *ctl_ch;
   struct container_runtime *crt;
   int reply_state;
@@ -40,7 +40,7 @@ struct container_runtime {
   uint hash;
   pid_t pid;
   sock *s;
-  struct cbor_stream stream;
+  CBOR_STREAM_EMBED(stream, 4);
   char hostname[];
 };
 
@@ -646,6 +646,20 @@ container_start(struct flock_machine_container_config *ccf)
 
 /* The Parent */
 
+static struct container_runtime *
+container_find_by_name(const char *name)
+{
+  uint h = mem_hash(name, strlen(name));
+  return HASH_FIND(hcf.hash, CRT, name, h);
+}
+
+struct cbor_channel *
+container_get_channel(const char *name)
+{
+  struct container_runtime *crt = container_find_by_name(name);
+  return crt ? cbor_channel_new(&crt->stream) : NULL;
+}
+
 static void
 container_cleanup(struct container_runtime *crt)
 {
@@ -655,7 +669,7 @@ container_cleanup(struct container_runtime *crt)
 }
 
 struct container_ctl_msg {
-  struct cbor_channel cch;
+  CBOR_CHANNEL_EMBED(cch, 4);
   struct cbor_channel *ctl_ch;
   int msg_state;
   int down_signal;
@@ -812,7 +826,7 @@ container_fork_request_reply(struct cbor_channel *cch, enum cbor_parse_result re
       cbor_put_string(cw, "OK");
     }
 
-  cbor_done_channel(&cfr->cch);
+  cbor_channel_done(&cfr->cch);
 
   return CPR_BLOCK_END;
 #undef FAIL
@@ -826,7 +840,7 @@ hypervisor_container_start(struct cbor_channel *cch, struct flock_machine_contai
 #define FAIL(id, msg) do { \
   CBOR_REPLY(cch, cw) CBOR_PUT_MAP(cw) { \
     cbor_put_int(cw, id); cbor_put_string(cw, msg);\
-  } cbor_done_channel(cch); \
+  } cbor_channel_done(cch); \
   birdloop_leave(hcf.loop); \
   return; } while (0)
 
@@ -860,7 +874,7 @@ hypervisor_container_start(struct cbor_channel *cch, struct flock_machine_contai
   cfr->cch.parse = container_fork_request_reply;
 
   crt->stream.parse = container_ctl_parse;
-  cbor_stream_init(&crt->stream, 2);
+  CBOR_STREAM_INIT(crt, stream, cch, hcf.p, struct container_ctl_msg);
 
   CBOR_REPLY(&cfr->cch, cw)
     CBOR_PUT_MAP(cw)
@@ -941,7 +955,7 @@ container_stopped(struct cbor_channel *cch, enum cbor_parse_result res)
       cbor_put_string(cw, "OK");
     }
 
-  cbor_done_channel(&ccc->cch);
+  cbor_channel_done(&ccc->cch);
   return CPR_BLOCK_END;
 #undef FAIL
 }
@@ -964,7 +978,7 @@ hypervisor_container_shutdown(struct cbor_channel *cch, struct flock_machine_con
 	cbor_put_string(cw, "BAD: Not found");
       }
 
-    cbor_done_channel(cch);
+    cbor_channel_done(cch);
     birdloop_leave(hcf.loop);
     return;
   }
@@ -1182,7 +1196,7 @@ hypervisor_container_fork(void)
 
     hcf.s->type = SK_UNIX_MSG;
     hcf.stream.parse = container_fork_request_reply;
-    cbor_stream_init(&hcf.stream, 3);
+    CBOR_STREAM_INIT(&hcf, stream, cch, hcf.p, struct container_fork_request);
     cbor_stream_attach(&hcf.stream, hcf.s);
 
     birdloop_leave(hcf.loop);
