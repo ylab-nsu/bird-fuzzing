@@ -997,35 +997,27 @@ hypervisor_container_shutdown(struct cbor_channel *cch, struct flock_machine_con
   birdloop_leave(hcf.loop);
 }
 
-struct ccs_parser_context {
-  struct cbor_parser_context *ctx;
+struct container_fork_request_child {
+  CBOR_CHANNEL_EMBED(cch, 4);
 
-  u64 bytes_consumed;
   u64 major_state;
 };
 
 #undef CBOR_PARSER_ERROR
 #define CBOR_PARSER_ERROR bug
 
-static struct ccs_parser_context ccx_, *ccx = &ccx_;
-
-static void
-hcf_parse(byte *buf, int size)
+static enum cbor_parse_result
+hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 {
-  ASSERT_DIE(size > 0);
-  struct cbor_parser_context *ctx = ccx->ctx;
-
   static struct flock_machine_container_config ccf;
+  SKIP_BACK_DECLARE(struct container_fork_request_child, ccx, cch, cch);
+  struct cbor_parser_context *ctx = &cch->stream->parser;
 
-  for (int pos = 0; pos < size; pos++)
+  switch (res)
   {
-    switch (cbor_parse_byte(ctx, buf[pos]))
-    {
       case CPR_ERROR:
-	bug("CBOR parser failure: %s", ctx->error);
-
       case CPR_MORE:
-	continue;
+	CBOR_PARSER_ERROR("Invalid input");
 
       case CPR_MAJOR:
 	/* Check type acceptance */
@@ -1116,26 +1108,9 @@ hcf_parse(byte *buf, int size)
 	}
 	break;
 
-      case CPR_BLOCK_END:
-	bug("invalid parser state");
-    }
-
-    /* End of array or map */
-    while (cbor_parse_block_end(ctx))
-    {
+    case CPR_BLOCK_END:
       switch (ccx->major_state)
       {
-	/* Code to run at the end of the mapping */
-	case 0: /* toplevel item ended */
-	  /* Reinit the parser */
-	  ccx->major_state = 0;
-	  ccx->bytes_consumed = 0;
-	  cbor_parser_reset(ccx->ctx);
-
-	  if (size > pos + 1)
-	    hcf_parse(buf + pos + 1, size - pos - 1);
-	  return;
-
 	case 1: /* the mapping ended */
 	  if (!ccf.cf.name)
 	    CBOR_PARSER_ERROR("Missing hostname");
@@ -1149,15 +1124,14 @@ hcf_parse(byte *buf, int size)
 	  container_start(&ccf);
 
 	  ccx->major_state = 0;
-	  break;
+	  return CPR_BLOCK_END;
 
 	default:
 	  bug("Unexpected state to end a mapping in");
       }
-    }
   }
 
-  ccx->bytes_consumed += size;
+  return CPR_MORE;
 }
 
 void
@@ -1211,14 +1185,20 @@ hypervisor_container_fork(void)
   this_thread_id |= 0xf000;
 
   /* initialize the forker */
-  ccx->ctx = cbor_parser_new(&root_pool, 2);
+  byte buf[4096];
+  sock *sk = sk_new(&root_pool);
+  sk->type = SK_MAGIC;
+  sk->rbuf = sk->rpos = buf;
+  sk->rbsize = sizeof buf;
+
+  CBOR_STREAM_EMBED(s, 4) stream;
+  CBOR_STREAM_INIT(&stream, s, cch, &root_pool, struct container_fork_request_child);
+  cbor_stream_attach(&stream.s, sk);
+  stream.s.parse = hcf_parse;
 
   while (true)
   {
-    byte buf[4096];
-
     ssize_t rx = read(fds[1], buf, sizeof buf);
-
     times_update();
 
     if (rx == 0)
@@ -1230,6 +1210,6 @@ hypervisor_container_fork(void)
     if (rx < 0)
       bug("Container forker child: failed to read: %m");
 
-    hcf_parse(buf, rx);
+    sk->rx_hook(sk, rx);
   }
 }
