@@ -249,8 +249,8 @@ cbor_stream_rx(sock *s, uint sz)
 	    if (ctx->type != 4)
 	      CSTR_PARSER_ERROR("Expected array, got %u", ctx->type);
 
-	    if (ctx->value != 3)
-	      CSTR_PARSER_ERROR("Expected array of length exactly 3");
+	    if (ctx->value < 2)
+	      CSTR_PARSER_ERROR("Expected array of length at least 2");
 
 	    stream->state = CSTR_EXPECT_ID;
 	    break;
