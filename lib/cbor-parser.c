@@ -332,8 +332,10 @@ static void
 cbor_stream_err(sock *sk, int err)
 {
   struct cbor_stream *stream = sk->data;
-  log(L_TRACE "CBOR stream %p error: %d (%M) (errno %m)",
-      sk, err, err, strerror(err));
+  if (err)
+    log(L_INFO "CBOR stream %p error: %d (%M)", sk, err, err);
+  else
+    log(L_INFO "CBOR stream %p hangup", sk);
 
   stream->cur_rx_channel = NULL;
 
