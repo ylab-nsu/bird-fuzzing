@@ -65,8 +65,6 @@ container_child_sighandler(int signo UNUSED)
   zombie = 1;
 }
 
-static int container_forker_fd = -1;
-
 static void
 container_poweroff(int fd, int sig)
 {
@@ -527,11 +525,19 @@ container_mainloop(int fd, struct flock_machine_container_config *ccf)
   }
 }
 
+struct container_fork_request_child {
+  CBOR_CHANNEL_EMBED(cch, 4);
+  struct flock_machine_container_config ccf;
+  u64 major_state;
+};
+
 static uint container_counter = 0;
 
 static void
-container_start(struct flock_machine_container_config *ccf)
+container_start(struct container_fork_request_child *ccx)
 {
+  struct flock_machine_container_config *ccf = &ccx->ccf;
+
   log(L_INFO "Requested to start a container, name %s, base %s, work %s",
       ccf->cf.name, ccf->basedir, ccf->workdir);
 
@@ -604,41 +610,15 @@ container_start(struct flock_machine_container_config *ccf)
 
   close(fds[1]);
 
-  struct {
-    struct cbor_writer w;
-    struct cbor_writer_stack_item si[2];
-    byte buf[128];
-  } _cw;
-
-  struct cbor_writer *cw = cbor_writer_init(&_cw.w, 2, _cw.buf, sizeof _cw.buf);
-  CBOR_PUT_MAP(cw)
-  {
-    cbor_put_int(cw, -2);
-    cbor_put_int(cw, pid);
-  }
-
-  struct iovec v = {
-    .iov_base = cw->data.start,
-    .iov_len = cw->data.pos - cw->data.start,
-  };
-  byte cbuf[CMSG_SPACE(sizeof fds[0])];
-  struct msghdr m = {
-    .msg_iov = &v,
-    .msg_iovlen = 1,
-    .msg_control = &cbuf,
-    .msg_controllen = sizeof cbuf,
-  };
-  struct cmsghdr *c = CMSG_FIRSTHDR(&m);
-  c->cmsg_level = SOL_SOCKET;
-  c->cmsg_type = SCM_RIGHTS;
-  c->cmsg_len = CMSG_LEN(sizeof fds[0]);
-  memcpy(CMSG_DATA(c), &fds[0], sizeof fds[0]);
-
   log(L_INFO "Sending socket");
 
-  e = sendmsg(container_forker_fd, &m, 0);
-  if (e < 0)
-    log(L_ERR "Failed to send socket: %m");
+  ccx->cch.stream->s->txfd = fds[0];
+  CBOR_REPLY(&ccx->cch, cw)
+    CBOR_PUT_MAP(cw)
+    {
+      cbor_put_int(cw, -2);
+      cbor_put_int(cw, pid);
+    }
 
   log(L_INFO "Socket sent");
   exit(0);
@@ -997,21 +977,15 @@ hypervisor_container_shutdown(struct cbor_channel *cch, struct flock_machine_con
   birdloop_leave(hcf.loop);
 }
 
-struct container_fork_request_child {
-  CBOR_CHANNEL_EMBED(cch, 4);
-
-  u64 major_state;
-};
-
 #undef CBOR_PARSER_ERROR
 #define CBOR_PARSER_ERROR bug
 
 static enum cbor_parse_result
 hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 {
-  static struct flock_machine_container_config ccf;
   SKIP_BACK_DECLARE(struct container_fork_request_child, ccx, cch, cch);
   struct cbor_parser_context *ctx = &cch->stream->parser;
+  struct flock_machine_container_config *ccf = &ccx->ccf;
 
   switch (res)
   {
@@ -1026,8 +1000,6 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	  case 0: /* toplevel */
 	    if (ctx->type != 5)
 	      CBOR_PARSER_ERROR("Expected mapping, got %u", ctx->type);
-
-	    ccf = (struct flock_machine_container_config) {};
 
 	    ccx->major_state = 1;
 	    break;
@@ -1049,11 +1021,11 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	    if (ctx->tflags & CPT_VARLEN)
 	      CBOR_PARSER_ERROR("Variable length string not supported yet");
 
-	    if (ccf.cf.name)
+	    if (ccf->cf.name)
 	      CBOR_PARSER_ERROR("Duplicate argument 0 / hostname");
 
 	    ASSERT_DIE(!ctx->target_buf);
-	    ccf.cf.name = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
+	    ccf->cf.name = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
 	    ctx->target_len = ctx->value;
 	    break;
 
@@ -1064,11 +1036,11 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	    if (ctx->tflags & CPT_VARLEN)
 	      CBOR_PARSER_ERROR("Variable length string not supported yet");
 
-	    if (ccf.workdir)
+	    if (ccf->workdir)
 	      CBOR_PARSER_ERROR("Duplicate argument 1 / basedir");
 
 	    ASSERT_DIE(!ctx->target_buf);
-	    ccf.basedir = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
+	    ccf->basedir = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
 	    ctx->target_len = ctx->value;
 	    break;
 
@@ -1079,11 +1051,11 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	    if (ctx->tflags & CPT_VARLEN)
 	      CBOR_PARSER_ERROR("Variable length string not supported yet");
 
-	    if (ccf.workdir)
+	    if (ccf->workdir)
 	      CBOR_PARSER_ERROR("Duplicate argument 2 / workdir");
 
 	    ASSERT_DIE(!ctx->target_buf);
-	    ccf.workdir = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
+	    ccf->workdir = ctx->target_buf = lp_alloc(ctx->lp, ctx->value + 1);
 	    ctx->target_len = ctx->value;
 	    break;
 
@@ -1112,16 +1084,16 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
       switch (ccx->major_state)
       {
 	case 1: /* the mapping ended */
-	  if (!ccf.cf.name)
+	  if (!ccf->cf.name)
 	    CBOR_PARSER_ERROR("Missing hostname");
 
-	  if (!ccf.workdir)
+	  if (!ccf->workdir)
 	    CBOR_PARSER_ERROR("Missing workdir");
 
-	  if (!ccf.basedir)
+	  if (!ccf->basedir)
 	    CBOR_PARSER_ERROR("Missing basedir");
 
-	  container_start(&ccf);
+	  container_start(ccx);
 
 	  ccx->major_state = 0;
 	  return CPR_BLOCK_END;
@@ -1132,6 +1104,12 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
   }
 
   return CPR_MORE;
+}
+
+static void
+hcf_cancel(struct cbor_stream *stream UNUSED)
+{
+  die("Forker child stream cancelled");
 }
 
 void
@@ -1180,25 +1158,23 @@ hypervisor_container_fork(void)
   /* noreturn child side */
   close(fds[0]);
   hexp_cleanup_after_fork();
-  container_forker_fd = fds[1];
-
   this_thread_id |= 0xf000;
 
   /* initialize the forker */
-  byte buf[4096];
   sock *sk = sk_new(&root_pool);
-  sk->type = SK_MAGIC;
-  sk->rbuf = sk->rpos = buf;
-  sk->rbsize = sizeof buf;
+  sk->type = SK_UNIX_MSG;
+  sk->rbuf = sk->rpos = alloca(sk->rbsize = 4096);
+  sk->tbuf = sk->tpos = alloca(sk->tbsize = 64);
 
   CBOR_STREAM_EMBED(s, 4) stream;
   CBOR_STREAM_INIT(&stream, s, cch, &root_pool, struct container_fork_request_child);
   cbor_stream_attach(&stream.s, sk);
   stream.s.parse = hcf_parse;
+  stream.s.cancel = hcf_cancel;
 
   while (true)
   {
-    ssize_t rx = read(fds[1], buf, sizeof buf);
+    ssize_t rx = read(fds[1], sk->rpos, sk->rbsize);
     times_update();
 
     if (rx == 0)
@@ -1210,6 +1186,8 @@ hypervisor_container_fork(void)
     if (rx < 0)
       bug("Container forker child: failed to read: %m");
 
-    sk->rx_hook(sk, rx);
+    sk->rpos += rx;
+    if (sk->rx_hook(sk, rx))
+      sk->rpos = sk->rbuf;
   }
 }
