@@ -20,9 +20,17 @@ cbor_parser_init(struct cbor_parser_context *ctx, linpool *lp, uint max_depth)
   ctx->lp = lp;
   ctx->flush = lp_save(lp);
 
-  ctx->type = 0xff;
   ctx->stack_countdown[0] = 1;
+  ctx->stack_pos = 0;
   ctx->stack_max = max_depth;
+
+  ctx->target_buf = NULL;
+  ctx->target_len = 0;
+
+  ctx->type = 0xff;
+
+  ctx->partial_state = CPE_TYPE;
+  ctx->partial_countdown = 0;
 }
 
 struct cbor_parser_context *
@@ -386,7 +394,7 @@ cbor_channel_create(struct cbor_stream *stream, u64 id)
     .parse = stream->parse,
   };
 
-  log(L_TRACE "CBOR channel create in stream %p, id %lu", stream, id);
+  log(L_TRACE "CBOR channel create in stream %p, id 0X%lx", stream, id);
   HASH_INSERT(stream->channels, CCH, cch);
   return cch;
 }
@@ -417,7 +425,7 @@ cbor_channel_done(struct cbor_channel *channel)
   struct cbor_stream *stream = channel->stream;
   bool active = (stream->cur_rx_channel == channel);
 
-  log(L_TRACE "CBOR channel%s done in stream %p, id %lu",
+  log(L_TRACE "CBOR channel%s done in stream %p, id 0x%lx",
       active ? " (active)" : "", stream, channel->id);
 
   if (active)
