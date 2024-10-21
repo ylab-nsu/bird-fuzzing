@@ -655,6 +655,14 @@ struct container_ctl_msg {
   int down_signal;
 };
 
+static void
+container_ctl_cancel(struct cbor_stream *stream)
+{
+  SKIP_BACK_DECLARE(struct container_runtime, crt, stream, stream);
+  HASH_REMOVE(hcf.hash, CRT, crt);
+  mb_free(crt);
+}
+
 static enum cbor_parse_result
 container_ctl_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 {
@@ -765,6 +773,10 @@ container_fork_request_reply(struct cbor_channel *cch, enum cbor_parse_result re
       switch (cfr->reply_state) {
 	case 3:
 	  cfr->reply_state = 4;
+	  return CPR_MORE;
+
+	case 4:
+	  cfr->reply_state = 5;
 	  break;
 
 	default:
@@ -854,6 +866,8 @@ hypervisor_container_start(struct cbor_channel *cch, struct flock_machine_contai
   cfr->cch.parse = container_fork_request_reply;
 
   crt->stream.parse = container_ctl_parse;
+  crt->stream.cancel = container_ctl_cancel;
+
   CBOR_STREAM_INIT(crt, stream, cch, hcf.p, struct container_ctl_msg);
 
   CBOR_REPLY(&cfr->cch, cw)
@@ -1083,6 +1097,9 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
     case CPR_BLOCK_END:
       switch (ccx->major_state)
       {
+	case 0:
+	  return CPR_BLOCK_END;
+
 	case 1: /* the mapping ended */
 	  if (!ccf->cf.name)
 	    CBOR_PARSER_ERROR("Missing hostname");
@@ -1096,7 +1113,7 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	  container_start(ccx);
 
 	  ccx->major_state = 0;
-	  return CPR_BLOCK_END;
+	  break;
 
 	default:
 	  bug("Unexpected state to end a mapping in");
@@ -1109,7 +1126,7 @@ hcf_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 static void
 hcf_cancel(struct cbor_stream *stream UNUSED)
 {
-  die("Forker child stream cancelled");
+  bug("Forker child stream cancelled");
 }
 
 void
@@ -1135,6 +1152,7 @@ hypervisor_container_fork(void)
     hcf.p = rp_new(birdloop_pool(hcf.loop), birdloop_domain(hcf.loop), "Container forker pool");
     hcf.s = sk_new(hcf.p);
     hcf.s->type = SK_MAGIC;
+    hcf.s->flags |= SKF_FD_RX;
     /* Set the hooks and fds according to the side we are at */
     sk_set_tbsize(hcf.s, 16384);
     sk_set_rbsize(hcf.s, 128);
@@ -1163,6 +1181,8 @@ hypervisor_container_fork(void)
   /* initialize the forker */
   sock *sk = sk_new(&root_pool);
   sk->type = SK_UNIX_MSG;
+  sk->fd = fds[1];
+  sk->flags |= SKF_FD_TX;
   sk->rbuf = sk->rpos = alloca(sk->rbsize = 4096);
   sk->tbuf = sk->tpos = alloca(sk->tbsize = 64);
 
