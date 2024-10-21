@@ -298,7 +298,8 @@ cbor_stream_rx(sock *s, uint sz)
 	case CSTR_INIT:
 	case CSTR_EXPECT_ID:
 	case CSTR_CLEANUP:
-	  CSTR_PARSER_ERROR("Invalid stream pre-parser state");
+//	  CSTR_PARSER_ERROR("Invalid stream pre-parser state");
+	  bug("Invalid stream pre-parser state");
 
 	case CSTR_MSG:
 	  CCH_PARSE(CPR_BLOCK_END);
@@ -394,7 +395,7 @@ cbor_channel_create(struct cbor_stream *stream, u64 id)
     .parse = stream->parse,
   };
 
-  log(L_TRACE "CBOR channel create in stream %p, id 0X%lx", stream, id);
+  log(L_TRACE "CBOR channel create in stream %p, id %lx", stream, id);
   HASH_INSERT(stream->channels, CCH, cch);
   return cch;
 }
@@ -425,7 +426,7 @@ cbor_channel_done(struct cbor_channel *channel)
   struct cbor_stream *stream = channel->stream;
   bool active = (stream->cur_rx_channel == channel);
 
-  log(L_TRACE "CBOR channel%s done in stream %p, id 0x%lx",
+  log(L_TRACE "CBOR channel%s done in stream %p, id %lx",
       active ? " (active)" : "", stream, channel->id);
 
   if (active)
