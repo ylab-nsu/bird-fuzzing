@@ -219,14 +219,8 @@ hcs_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	  htx->major_state = ~0ULL;
 	  return CPR_BLOCK_END;
 
-	case 1:
+	case 3:
 	  htx->major_state = 0;
-	  return CPR_MORE;
-
-	case 5:
-	  /* Finalize the command to exec in hypervisor */
-	  CBOR_PARSER_ERROR("NOT IMPLEMENTED YET");
-	  htx->major_state = 1;
 	  return CPR_MORE;
 
 	case 501:
@@ -238,7 +232,7 @@ hcs_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	    default:
 	      CBOR_PARSER_ERROR("Unknown machine type: %d", hpc->cfg.cf.type);
 	  }
-	  htx->major_state = 1;
+	  htx->major_state = 3;
 	  return CPR_MORE;
 
 	case 601:
@@ -250,7 +244,7 @@ hcs_parse(struct cbor_channel *cch, enum cbor_parse_result res)
 	    */
 
 	  hypervisor_container_shutdown(&hpc->cch, &hpc->cfg.container);
-	  htx->major_state = 1;
+	  htx->major_state = 3;
 	  return CPR_MORE;
 
 	default:
