@@ -291,7 +291,7 @@ bmp_schedule_tx_packet(struct bmp_proto *p, const byte *payload, const size_t si
   if (sk_tx_buffer_empty(p->sk)
       && !ev_active(p->tx_ev))
   {
-    ev_schedule(p->tx_ev);
+    ev_send_loop(p->p.loop, p->tx_ev);
   }
 }
 
@@ -334,7 +334,7 @@ bmp_fire_tx(void *p_)
     {
       if (!ev_active(p->tx_ev))
       {
-        ev_schedule(p->tx_ev);
+        ev_send_loop(p->p.loop, p->tx_ev);
       }
 
       return;
@@ -850,7 +850,7 @@ bmp_route_monitor_put_update(struct bmp_proto *p, struct bmp_stream *bs, const b
 
   /* Kick the commit */
   if (!ev_active(p->update_ev))
-    ev_schedule(p->update_ev);
+    ev_send_loop(p->p.loop, p->update_ev);
 }
 
 static void
@@ -1279,7 +1279,7 @@ bmp_connect(struct bmp_proto *p)
   if (rc < 0)
     sk_log_error(sk, p->p.name);
 
-  tm_start(p->connect_retry_timer, CONNECT_RETRY_TIME);
+  tm_start_in(p->connect_retry_timer, CONNECT_RETRY_TIME, p->p.loop);
 }
 
 /* BMP connect successful event - switch from Connect to Established state */
@@ -1314,7 +1314,7 @@ bmp_sock_err(sock *sk, int err)
     bmp_down(p);
 
   bmp_close_socket(p);
-  tm_start(p->connect_retry_timer, CONNECT_RETRY_TIME);
+  tm_start_in(p->connect_retry_timer, CONNECT_RETRY_TIME, p->p.loop);
 
   proto_notify_state(&p->p, PS_START);
 }
@@ -1455,7 +1455,7 @@ bmp_start(struct proto *P)
   p->started = false;
   p->sock_err = 0;
 
-  tm_start(p->connect_retry_timer, CONNECT_INIT_TIME);
+  tm_start_in(p->connect_retry_timer, CONNECT_INIT_TIME, p->p.loop);
 
   /* Subscribe to protocol state changes */
   p->proto_state_reader = (struct lfjour_recipient) {
@@ -1485,6 +1485,7 @@ bmp_shutdown(struct proto *P)
   }
 
   proto_states_unsubscribe(&p->proto_state_reader);
+  ev_postpone(&p->proto_state_changed);
 
   p->sock_err = 0;
 
