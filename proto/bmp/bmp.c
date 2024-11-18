@@ -1034,29 +1034,6 @@ bmp_send_termination_msg(struct bmp_proto *p,
   bmp_buffer_free(&stream);
 }
 
-#if 0
-int
-bmp_preexport(struct channel *C UNUSED, rte *e)
-{
-  /* Reject non-direct routes. Check if sender proto is the same as proto which created the route.
-   * It assumes that route was created in a protocol.
-   */
-  struct rt_import_request *req = e->sender->req;
-  struct channel *ch = SKIP_BACK(struct channel, in_req, req);
-
-  struct rte_owner *owner = e->src->owner;
-  struct proto *p = SKIP_BACK(struct proto, sources, owner);
-  if (ch->proto != p)
-    return -1;
-
-  /* Reject non-BGP routes */
-  if (p->proto != &proto_bgp)
-    return -1;
-
-  return 1;
-}
-#endif
-
 static void
 bmp_split_policy(struct bmp_proto *p, const rte *new, const rte *old)
 {
@@ -1065,7 +1042,10 @@ bmp_split_policy(struct bmp_proto *p, const rte *new, const rte *old)
   struct proto *rte_proto = (struct proto*) SKIP_BACK(struct proto, sources, loc.src->owner);
   struct bgp_proto *bgp = (struct bgp_proto *) rte_proto;
   struct bgp_channel *src_ch = SKIP_BACK(struct bgp_channel, c.in_req, loc.sender->req);
-  ASSERT_DIE(src_ch->c.proto == rte_proto); /* No pipes supported for now */
+
+  /* Ignore piped routes */
+  if (src_ch->c.proto != rte_proto)
+    return;
 
   /* Ignore non-BGP routes */
   if (rte_proto->proto != &proto_bgp)
