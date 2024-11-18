@@ -220,6 +220,7 @@ static void bmp_close_socket(struct bmp_proto *p);
 static void bmp_check_routes(void *bt_);
 static void bmp_feed_end(struct rt_export_request *req);
 static void bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up);
+static void bmp_proto_state_changed(void *_p);
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
@@ -514,7 +515,7 @@ bmp_add_table(struct bmp_proto *p, rtable *tab)
 
   bt->event.hook = bmp_check_routes;
   bt->out_req = (struct rt_export_request) {
-    .name = mb_sprintf(p->p.pool, "%s.exp_request", p->p.name),
+    .name = mb_sprintf(p->p.pool, "%s.export", p->p.name),
     .r = (struct lfjour_recipient) {
       .target = proto_event_list(&p->p),
       .event = &bt->event,
@@ -524,6 +525,7 @@ bmp_add_table(struct bmp_proto *p, rtable *tab)
     //.dump = channel_dump_export_req, TODO: this will crash on `dump tables` from CLI
     .fed = bmp_feed_end,
   };
+
   rt_export_subscribe(tab, all, &bt->out_req);
   return bt;
 }
@@ -854,9 +856,14 @@ bmp_route_monitor_put_update(struct bmp_proto *p, struct bmp_stream *bs, const b
 }
 
 static void
-bmp_route_monitor_notify(struct bmp_proto *p, struct bgp_proto *bgp_p, struct bmp_stream *bs, const struct rte *new)
+bmp_route_monitor_notify(struct bmp_proto *p, struct bgp_proto *bgp_p, u32 afi, bool policy, const rte *new, ea_list *old)
 {
-  bmp_route_monitor_end_of_rib(p, bs);
+  /* Idempotent update */
+  if ((old == new->attrs) || old && new->attrs && ea_same(old, new->attrs))
+    return;
+
+  struct bmp_stream *bs = bmp_find_stream(p, bgp_p, afi, policy);
+
   byte buf[BGP_MAX_EXT_MSG_LENGTH];
   byte *end = bgp_bmp_encode_rte(bs->sender, bgp_p, buf, new);
 
@@ -1068,51 +1075,20 @@ bmp_split_policy(struct bmp_proto *p, const rte *new, const rte *old)
   if (p->monitoring_rib.in_pre_policy)
   {
     /* Compute the pre policy attributes */
-    ea_list *new_attrs = new ? ea_strip_to(new->attrs, BIT32_ALL(EALS_PREIMPORT)) : NULL;
+    loc.attrs = new ? ea_strip_to(new->attrs, BIT32_ALL(EALS_PREIMPORT)) : NULL;
     ea_list *old_attrs = old ? ea_strip_to(old->attrs, BIT32_ALL(EALS_PREIMPORT)) : NULL;
 
-    loc.attrs = new_attrs;
-
-    if (new_attrs != old_attrs)
-    {
-      /* The attributes are actually different, announce the change */
-      if (ea_same(new_attrs, old_attrs))
-        bug("Two attribute sets are same in the attribute cache.");
-
-      struct bmp_stream *bs = bmp_find_stream(p, bgp, src_ch->afi, false);
-      if (bs)
-      {
-        if (bmp_find_peer(p, proto_get_state(bgp->p.id)) == NULL)
-          bug("Bmp got a route which belongs to a channel we do not know yet. It is more complicated state and needs to be implemented."); //TODO
-
-        bmp_route_monitor_notify(p, bgp, bs, &loc);
-      }
-    }
+    bmp_route_monitor_notify(p, bgp, src_ch->afi, false, &loc, old_attrs);
   }
 
   /* Checking the post policy */
   if (p->monitoring_rib.in_post_policy)
   {
     /* Compute the post policy attributes */
-    ea_list *new_attrs = new ? ea_normalize(new->attrs, 0) : NULL;
+    loc.attrs = new ? ea_normalize(new->attrs, 0) : NULL;
     ea_list *old_attrs = old ? ea_normalize(old->attrs, 0) : NULL;
 
-    loc.attrs = new_attrs;
-
-    /* TODO: filter only BGP-relevant attributes */
-
-    if ((new_attrs != old_attrs) || ea_same(new_attrs, old_attrs))
-    {
-      /* The attributes are actually different, announce the change */
-      struct bmp_stream *bs = bmp_find_stream(p, bgp, src_ch->afi, true);
-      if (bs)
-      {
-        if (bmp_find_peer(p, proto_get_state(bgp->p.id)) == NULL)
-          bug("Bmp got a route which belongs to a channel we do not know yet. It is more complicated state and needs to be implemented."); //TODO
-
-        bmp_route_monitor_notify(p, bgp, bs, &loc);
-      }
-    }
+    bmp_route_monitor_notify(p, bgp, src_ch->afi, true, &loc, old_attrs);
   }
 }
 
@@ -1124,27 +1100,33 @@ bmp_check_routes(void *bt_)
 
   RT_EXPORT_WALK(&bt->out_req, u)
   {
+    log("export walk, kind %d", u->kind);
+
     switch (u->kind)
     {
       case RT_EXPORT_STOP:
-      	bug("Main table export stopped");
+	bug("Main table export stopped");
 
       case RT_EXPORT_FEED:
-        uint oldpos = 0;
-	      while ((oldpos < u->feed->count_routes) && !(u->feed->block[oldpos].flags & REF_OBSOLETE))
-	        oldpos++;
+	uint oldpos = 0;
+	while ((oldpos < u->feed->count_routes) && !(u->feed->block[oldpos].flags & REF_OBSOLETE))
+	  oldpos++;
 
-	      /* Send updates one after another */
-	      for (uint i = 0; i < oldpos; i++)
-	      {
-	        rte *new = &u->feed->block[i];
-	        bmp_split_policy(p, new, NULL);
-	      }
-	      break;
-	    case RT_EXPORT_UPDATE:
-	      bmp_split_policy(p, u->update->new, u->update->old);
-	      break;
-	  }
+	/* Send updates one after another */
+	for (uint i = 0; i < u->feed->count_routes; i++)
+	{
+	  rte *new = &u->feed->block[i];
+	  if (new->flags & REF_OBSOLETE)
+	    break;
+
+	  bmp_split_policy(p, new, NULL);
+	}
+	break;
+
+      case RT_EXPORT_UPDATE:
+	bmp_split_policy(p, u->update->new, u->update->old);
+	break;
+    }
   }
 }
 
@@ -1204,6 +1186,20 @@ bmp_startup(struct bmp_proto *p)
   PST_LOCKED(ts) /* The size of protos field will never decrease, the inconsistency caused by growing is not important */
     length = ts->length_states;
 
+  /* Subscribe to protocol state changes */
+  p->proto_state_reader = (struct lfjour_recipient) {
+    .event = &p->proto_state_changed,
+    .target = proto_event_list(&p->p),
+  };
+
+  p->proto_state_changed = (event) {
+    .hook = bmp_proto_state_changed,
+    .data = p,
+  };
+
+  proto_states_subscribe(&p->proto_state_reader);
+
+  /* Load protocol states */
   for (u32 i = 0; i < length; i++)
   {
     ea_list *proto_attr = proto_get_state(i);
@@ -1234,6 +1230,9 @@ bmp_down(struct bmp_proto *p)
   p->started = false;
 
   TRACE(D_EVENTS, "BMP session closed");
+
+  proto_states_unsubscribe(&p->proto_state_reader);
+  ev_postpone(&p->proto_state_changed);
 
   /* Unregister existing peer structures */
   HASH_WALK_DELSAFE(p->peer_map, next, bp)
@@ -1457,19 +1456,6 @@ bmp_start(struct proto *P)
 
   tm_start_in(p->connect_retry_timer, CONNECT_INIT_TIME, p->p.loop);
 
-  /* Subscribe to protocol state changes */
-  p->proto_state_reader = (struct lfjour_recipient) {
-    .event = &p->proto_state_changed,
-    .target = proto_event_list(&p->p),
-  };
-
-  p->proto_state_changed = (event) {
-    .hook = bmp_proto_state_changed,
-    .data = p,
-  };
-
-  proto_states_subscribe(&p->proto_state_reader);
-
   return PS_START;
 }
 
@@ -1483,9 +1469,6 @@ bmp_shutdown(struct proto *P)
     bmp_send_termination_msg(p, BMP_TERM_REASON_ADM);
     bmp_down(p);
   }
-
-  proto_states_unsubscribe(&p->proto_state_reader);
-  ev_postpone(&p->proto_state_changed);
 
   p->sock_err = 0;
 
