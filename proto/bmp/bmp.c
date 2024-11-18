@@ -219,7 +219,7 @@ static void bmp_sock_err(sock *sk, int err);
 static void bmp_close_socket(struct bmp_proto *p);
 static void bmp_check_routes(void *bt_);
 static void bmp_feed_end(struct rt_export_request *req);
-static void bmp_recip_iteration(struct bmp_proto *p, struct lfjour_item *last_up);
+static void bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up);
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
@@ -599,7 +599,7 @@ bmp_find_stream(struct bmp_proto *p, const struct bgp_proto *bgp, u32 afi, bool 
   struct bmp_stream *s = HASH_FIND(p->stream_map, HASH_STREAM, bgp_attr, bmp_stream_key(afi, policy));
   while (s == NULL)
   {
-    bmp_recip_iteration(p, lfjour_get(&p->proto_state_reader));
+    bmp_process_proto_state_change(p, lfjour_get(&p->proto_state_reader));
     s = HASH_FIND(p->stream_map, HASH_STREAM, bgp_attr, bmp_stream_key(afi, policy));
   }
   return s;
@@ -1358,7 +1358,7 @@ bmp_postconfig(struct proto_config *CF)
 
 
 static void
-bmp_recip_iteration(struct bmp_proto *p, struct lfjour_item *last_up)
+bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
 {
   struct proto_pending_update *pupdate = SKIP_BACK(struct proto_pending_update, li, last_up);
   if (!pupdate)
@@ -1394,7 +1394,7 @@ bmp_recip_iteration(struct bmp_proto *p, struct lfjour_item *last_up)
 }
 
 static void
-fc_for_bmp_recipient(void *_p)
+bmp_proto_state_changed(void *_p)
 {
   struct bmp_proto *p = _p;
 
@@ -1402,19 +1402,7 @@ fc_for_bmp_recipient(void *_p)
 
   struct lfjour_item *last_up;
   while (last_up = lfjour_get(&p->proto_state_reader))
-    bmp_recip_iteration(p, last_up);
-}
-
-void
-create_bmp_recipient(struct bmp_proto *p)
-{
-  struct lfjour_recipient *r = &p->proto_state_reader;
-  r->event = &p->proto_state_changed;
-  *r->event = (event) { .hook = fc_for_bmp_recipient, .data = p };
-  r->target = birdloop_event_list(p->p.loop);
-
-  proto_states_subscribe(r);
-  p->lf_jour_inited = 1;
+    bmp_process_proto_state_change(p, last_up);
 }
 
 /** Configuration handle section **/
@@ -1469,8 +1457,19 @@ bmp_start(struct proto *P)
 
   tm_start(p->connect_retry_timer, CONNECT_INIT_TIME);
 
-  if (p->lf_jour_inited == 0)
-    create_bmp_recipient(p);
+  /* Subscribe to protocol state changes */
+  p->proto_state_reader = (struct lfjour_recipient) {
+    .event = &p->proto_state_changed,
+    .target = proto_event_list(&p->p),
+  };
+
+  p->proto_state_changed = (event) {
+    .hook = bmp_proto_state_changed,
+    .data = p,
+  };
+
+  proto_states_subscribe(&p->proto_state_reader);
+
   return PS_START;
 }
 
@@ -1484,6 +1483,8 @@ bmp_shutdown(struct proto *P)
     bmp_send_termination_msg(p, BMP_TERM_REASON_ADM);
     bmp_down(p);
   }
+
+  proto_states_unsubscribe(&p->proto_state_reader);
 
   p->sock_err = 0;
 

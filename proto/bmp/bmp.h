@@ -75,7 +75,6 @@ struct bmp_proto {
 
   struct lfjour_recipient proto_state_reader; // Reader of protocol states
   event proto_state_changed;
-  int lf_jour_inited;
 };
 
 struct bmp_peer {
