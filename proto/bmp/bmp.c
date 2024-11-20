@@ -224,7 +224,7 @@ static void bmp_proto_state_changed(void *_p);
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
-    const adata *tx_data, const adata *rx_data);
+    const adata *tx_data, const adata *rx_data, struct bgp_conn_sk_ad *sk);
 
 static void bmp_route_monitor_end_of_rib(struct bmp_proto *p, struct bmp_stream *bs);
 
@@ -718,7 +718,8 @@ bmp_remove_peer(struct bmp_proto *p, struct bmp_peer *bp)
 
 static void
 bmp_peer_up_(struct bmp_proto *p, ea_list *bgp_attr, bool sync,
-	     const adata *tx_open_msg, const adata *rx_open_msg)
+	     const adata *tx_open_msg, const adata *rx_open_msg,
+	     struct bgp_conn_sk_ad *sk)
 {
   if (!p->started)
     return;
@@ -732,7 +733,7 @@ bmp_peer_up_(struct bmp_proto *p, ea_list *bgp_attr, bool sync,
 
   bp = bmp_add_peer(p, bgp_attr);
 
-  bmp_send_peer_up_notif_msg(p, bgp_attr, tx_open_msg, rx_open_msg);
+  bmp_send_peer_up_notif_msg(p, bgp_attr, tx_open_msg, rx_open_msg, sk);
 
   /*
    * We asssume peer_up() notifications are received before any route
@@ -750,8 +751,8 @@ bmp_peer_up_(struct bmp_proto *p, ea_list *bgp_attr, bool sync,
   }
 }
 
-static void
-bmp_peer_init(struct bmp_proto *p, ea_list *bgp_attr)
+static bool
+bmp_peer_up_inout(struct bmp_proto *p, ea_list *bgp_attr, bool sync)
 {
   int in_state = ea_get_int(bgp_attr, &ea_bgp_in_conn_state, 0);
   int out_state = ea_get_int(bgp_attr, &ea_bgp_out_conn_state, 0);
@@ -762,37 +763,27 @@ bmp_peer_init(struct bmp_proto *p, ea_list *bgp_attr)
 
     const adata *loc_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_local_open_msg);
     const adata *rem_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_remote_open_msg);
+    SKIP_BACK_DECLARE(struct bgp_conn_sk_ad, sk, ad, ea_get_adata(bgp_attr, &ea_bgp_in_conn_sk));
 
     ASSERT_DIE(loc_open && rem_open);
-    bmp_peer_up_(p, bgp_attr, false, loc_open, rem_open);
+    bmp_peer_up_(p, bgp_attr, sync, loc_open, rem_open, sk);
+
+    return true;
   }
-  else if (out_state == BS_ESTABLISHED)
+
+  if (out_state == BS_ESTABLISHED)
   {
     const adata *loc_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_local_open_msg);
     const adata *rem_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_remote_open_msg);
+    SKIP_BACK_DECLARE(struct bgp_conn_sk_ad, sk, ad, ea_get_adata(bgp_attr, &ea_bgp_out_conn_sk));
 
     ASSERT_DIE(loc_open && rem_open);
-    bmp_peer_up_(p, bgp_attr, false, loc_open, rem_open);
-  }
-}
+    bmp_peer_up_(p, bgp_attr, sync, loc_open, rem_open, sk);
 
-static const struct bgp_conn_sk_ea  *
-bmp_get_birdsock(ea_list *bgp)
-{
-  int in_state = ea_get_int(bgp, &ea_bgp_in_conn_state, 0);
-  int out_state = ea_get_int(bgp, &ea_bgp_out_conn_state, 0);
-  if (in_state == BS_ESTABLISHED)
-  {
-    struct bgp_conn_sk_ea *bgp_sk = (struct bgp_conn_sk_ea *)  ea_get_adata(bgp, &ea_bgp_in_conn_sk)->data;
-    return bgp_sk;
-  }
-  else if (out_state == BS_ESTABLISHED)
-  {
-    struct bgp_conn_sk_ea *bgp_sk = (struct bgp_conn_sk_ea *)  ea_get_adata(bgp, &ea_bgp_out_conn_sk)->data;
-    return bgp_sk;
+    return true;
   }
 
-  return NULL;
+  return false;
 }
 
 static bool
@@ -810,15 +801,9 @@ bmp_is_peer_global_instance(ea_list *bgp)
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
-    const adata *tx_data, const adata *rx_data)
+    const adata *tx_data, const adata *rx_data, struct bgp_conn_sk_ad *sk)
 {
   ASSERT(p->started);
-
-  const struct bgp_conn_sk_ea *sk = bmp_get_birdsock(bgp);
-  IF_PTR_IS_NULL_PRINT_ERR_MSG_AND_RETURN_OPT_VAL(
-    sk,
-    "[BMP] No BGP socket"
-  );
 
   const int rem_as = ea_get_int(bgp, &ea_bgp_rem_as, 0);
   const int rem_id = ea_get_int(bgp, &ea_bgp_rem_id, 0);
@@ -1203,7 +1188,7 @@ bmp_startup(struct bmp_proto *p)
     if (proto != &proto_bgp || state != PS_UP)
       continue;
 
-    bmp_peer_init(p, proto_attr);
+    bmp_peer_up_inout(p, proto_attr, false);
   }
 }
 
@@ -1355,30 +1340,13 @@ bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
   if (!ppu)
     return;
 
-  int id = ea_get_int(ppu->proto_attr, &ea_proto_id, 0);
-
-  int in_state = ea_get_int(ppu->proto_attr, &ea_bgp_in_conn_state, 0);
-  int out_state = ea_get_int(ppu->proto_attr, &ea_bgp_out_conn_state, 0);
-
-  if (in_state == BS_ESTABLISHED)
-  {
-    ASSERT_DIE(out_state != BS_ESTABLISHED);
-    const adata *tx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_in_conn_local_open_msg);
-    const adata *rx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_in_conn_remote_open_msg);
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open, rx_open);
-  }
-
-  else if (out_state == BS_ESTABLISHED)
-  {
-    const adata *tx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_out_conn_local_open_msg);
-    const adata *rx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_out_conn_remote_open_msg);
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open, rx_open);
-  }
+  if (bmp_peer_up_inout(p, ppu->proto_attr, true))
+    ;
 
   else if (ea_get_int(ppu->proto_attr, &ea_bgp_close_bmp_set, 0))
   {
     struct closing_bgp *closing = (struct closing_bgp *) ea_get_ptr(ppu->proto_attr, &ea_protocol_type, 0);
-    bmp_peer_down_(p, proto_get_state(id),
+    bmp_peer_down_(p, ppu->proto_attr,
 	      closing->err_class, closing->err_code, closing->err_subcode, closing->data, closing->length);
   }
 
@@ -1405,6 +1373,7 @@ bmp_init(struct proto_config *CF)
   struct bmp_proto *p = (void *) P;
   struct bmp_config *cf = (void *) CF;
 
+  ASSERT_DIE(birdloop_inside(&main_birdloop));
   if (!bgp_next_hop_ea_class)
     bgp_next_hop_ea_class = ea_class_find_by_name("bgp_next_hop");
 
