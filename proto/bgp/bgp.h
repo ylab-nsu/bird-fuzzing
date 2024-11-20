@@ -319,7 +319,8 @@ struct bgp_conn {
   uint hold_time, keepalive_time, send_hold_time;	/* Times calculated from my and neighbor's requirements */
 };
 
-struct bgp_conn_sk_ea {
+struct bgp_conn_sk_ad {
+  adata ad;
   ip_addr saddr;
   ip_addr daddr;
   int sport;

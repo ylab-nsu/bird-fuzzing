@@ -1274,21 +1274,24 @@ bgp_setup_sk(struct bgp_conn *conn, sock *s)
   s->fast_rx = 1;
   conn->sk = s;
 
-  struct bgp_conn_sk_ea sk_ea = {
+  struct bgp_conn_sk_ad sk_ad = {
+    .ad = { .length = sizeof sk_ad - sizeof sk_ad.ad },
     .saddr = s->saddr,
     .daddr = s->daddr,
     .sport = s->sport,
-    .dport = s->dport
+    .dport = s->dport,
   };
 
   ea_list *attr = conn->bgp->p.ea_state;
+
   if (conn == &conn->bgp->incoming_conn)
-    ea_set_attr(&attr, EA_LITERAL_STORE_ADATA(&ea_bgp_in_conn_sk, 0, (byte*)(&sk_ea), sizeof(sk_ea)));
+    ea_set_attr(&attr, EA_LITERAL_DIRECT_ADATA(&ea_bgp_in_conn_sk, 0, &sk_ad.ad));
   else
   {
     ASSERT_DIE(conn == &conn->bgp->outgoing_conn);
-    ea_set_attr(&attr, EA_LITERAL_STORE_ADATA(&ea_bgp_out_conn_sk, 0, (byte*)(&sk_ea), sizeof(sk_ea)));
+    ea_set_attr(&attr, EA_LITERAL_DIRECT_ADATA(&ea_bgp_out_conn_sk, 0, &sk_ad.ad));
   }
+
   conn->bgp->p.ea_state = ea_lookup(conn->bgp->p.ea_state, 0, EALS_CUSTOM);
   proto_announce_state_later(&conn->bgp->p, attr);
 }
