@@ -837,30 +837,20 @@ bgp_conn_leave_established_state(struct bgp_conn *conn, struct bgp_proto *p)
   if (p->p.proto_state == PS_UP)
     bgp_stop(p, 0, NULL, 0);
 
-#ifdef CONFIG_BMP
-  struct {
-    struct closing_bgp closing_struct;
-    byte data[conn->notify_size];
-  } to_ea;
-
-  to_ea.closing_struct = (struct closing_bgp) {
-    .err_class = p->last_error_class,
-    .err_code = conn->notify_code,
-    .err_subcode = conn->notify_subcode,
-    .length = conn->notify_size,
+  uint adsz;
+  struct bgp_session_close_ad *bscad = alloca(adsz = sizeof *bscad + conn->notify_size);
+  *bscad = (struct bgp_session_close_ad) {
+    .ad.length = adsz - sizeof(adata),
+    .last_error_class = p->last_error_class,
+    .notify_code = conn->notify_code,
+    .notify_subcode = conn->notify_subcode,
   };
-  memcpy(to_ea.data, conn->notify_data, conn->notify_size);
+  memcpy(bscad->data, conn->notify_data, conn->notify_size);
 
-  ea_set_attr(&p->p.ea_state, EA_LITERAL_STORE_ADATA(&ea_bgp_close_bmp, 0, &to_ea.closing_struct, sizeof(to_ea)));
-  ea_set_attr(&p->p.ea_state, EA_LITERAL_EMBEDDED(&ea_bgp_close_bmp_set, 0, 1));
+  ea_set_attr(&p->p.ea_state, EA_LITERAL_DIRECT_ADATA(&ea_bgp_close_bmp, 0, &bscad->ad));
   p->p.ea_state = ea_lookup(p->p.ea_state, 0, EALS_CUSTOM);
 
   proto_announce_state_later(&p->p, p->p.ea_state);
-
-  //bmp_peer_down(p, p->last_error_class,
-	//	conn->notify_code, conn->notify_subcode,
-	//	conn->notify_data, conn->notify_size);
-#endif
 }
 
 void
@@ -2694,7 +2684,6 @@ bgp_state_to_eattr(struct proto *P, struct ea_list *state)
   ea_set_attr(&state, EA_LITERAL_STORE_ADATA(&ea_bgp_out_conn_remote_open_msg, 0, NULL, 0));
 
   ea_set_attr(&state, EA_LITERAL_STORE_ADATA(&ea_bgp_close_bmp, 0, NULL, 0));
-  ea_set_attr(&state, EA_LITERAL_EMBEDDED(&ea_bgp_close_bmp_set, 0, 0));
   return 1;
 }
 

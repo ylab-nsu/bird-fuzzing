@@ -327,11 +327,11 @@ struct bgp_conn_sk_ad {
   int dport;
 };
 
-struct closing_bgp {
-  int err_class;
-  int err_code;
-  int err_subcode;
-  int length;
+struct bgp_session_close_ad {
+  adata ad;
+  int notify_code;
+  int notify_subcode;
+  u8 last_error_class;
   byte data[0];
 };
 
