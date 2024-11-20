@@ -224,8 +224,7 @@ static void bmp_proto_state_changed(void *_p);
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
-  const byte *tx_data, const size_t tx_data_size,
-  const byte *rx_data, const size_t rx_data_size);
+    const adata *tx_data, const adata *rx_data);
 
 static void bmp_route_monitor_end_of_rib(struct bmp_proto *p, struct bmp_stream *bs);
 
@@ -445,12 +444,11 @@ static void
 bmp_peer_up_notif_msg_serialize(buffer *stream, const bool is_peer_global,
   const u32 peer_as, const u32 peer_bgp_id, const bool as4_support,
   const ip_addr local_addr, const ip_addr remote_addr, const u16 local_port,
-  const u16 remote_port, const byte *sent_msg, const size_t sent_msg_length,
-  const byte *recv_msg, const size_t recv_msg_length)
+  const u16 remote_port, const adata *sent_msg, const adata *recv_msg)
 {
   const size_t data_size =
     BMP_PER_PEER_HDR_SIZE + BMP_PEER_UP_NOTIF_MSG_FIX_SIZE +
-    BGP_HEADER_LENGTH + sent_msg_length + BGP_HEADER_LENGTH + recv_msg_length;
+    BGP_HEADER_LENGTH + sent_msg->length + BGP_HEADER_LENGTH + recv_msg->length;
 
   bmp_buffer_need(stream, BMP_COMMON_HDR_SIZE + data_size);
   bmp_common_hdr_serialize(stream, BMP_PEER_UP_NOTIF, data_size);
@@ -460,10 +458,10 @@ bmp_peer_up_notif_msg_serialize(buffer *stream, const bool is_peer_global,
   bmp_put_ipa(stream, local_addr);
   bmp_put_u16(stream, local_port);
   bmp_put_u16(stream, remote_port);
-  bmp_put_bgp_hdr(stream, PKT_OPEN, BGP_HEADER_LENGTH + sent_msg_length);
-  bmp_put_data(stream, sent_msg, sent_msg_length);
-  bmp_put_bgp_hdr(stream, PKT_OPEN, BGP_HEADER_LENGTH + recv_msg_length);
-  bmp_put_data(stream, recv_msg, recv_msg_length);
+  bmp_put_bgp_hdr(stream, PKT_OPEN, BGP_HEADER_LENGTH + sent_msg->length);
+  bmp_put_data(stream, sent_msg->data, sent_msg->length);
+  bmp_put_bgp_hdr(stream, PKT_OPEN, BGP_HEADER_LENGTH + recv_msg->length);
+  bmp_put_data(stream, recv_msg->data, recv_msg->length);
 }
 
 static void
@@ -686,7 +684,6 @@ bmp_add_peer(struct bmp_proto *p, ea_list *bgp_attr)
       continue;
 
     rtable *ch_table = (rtable *) ea_get_ptr(chan_attr, &ea_rtable, 0);
-    const char *name = ea_get_adata(chan_attr, &ea_name)->data;
     int in_keep = ea_get_int(chan_attr, &ea_in_keep, 0);
 
     if (p->monitoring_rib.in_pre_policy && ch_table)
@@ -694,7 +691,10 @@ bmp_add_peer(struct bmp_proto *p, ea_list *bgp_attr)
       if (in_keep == RIK_PREFILTER)
         bmp_add_stream(p, bp, ea_get_int(chan_attr, &ea_bgp_afi, 0), false, ch_table, chan_attr, 1);
       else
-        log(L_WARN "%s: Try to do pre policy with disabled import tables (channel %s)", p->p.name, name);
+        log(L_WARN "%s: Failed to request pre-policy for %s.%s, import table disabled",
+	    p->p.name,
+	    ea_get_adata(bgp_attr, &ea_name)->data,
+	    ea_get_adata(chan_attr, &ea_name)->data);
     }
 
     if (p->monitoring_rib.in_post_policy && ch_table)
@@ -718,8 +718,7 @@ bmp_remove_peer(struct bmp_proto *p, struct bmp_peer *bp)
 
 static void
 bmp_peer_up_(struct bmp_proto *p, ea_list *bgp_attr, bool sync,
-	    const byte *tx_open_msg, uint tx_open_length,
-	    const byte *rx_open_msg, uint rx_open_length)
+	     const adata *tx_open_msg, const adata *rx_open_msg)
 {
   if (!p->started)
     return;
@@ -733,7 +732,7 @@ bmp_peer_up_(struct bmp_proto *p, ea_list *bgp_attr, bool sync,
 
   bp = bmp_add_peer(p, bgp_attr);
 
-  bmp_send_peer_up_notif_msg(p, bgp_attr, tx_open_msg, tx_open_length, rx_open_msg, rx_open_length);
+  bmp_send_peer_up_notif_msg(p, bgp_attr, tx_open_msg, rx_open_msg);
 
   /*
    * We asssume peer_up() notifications are received before any route
@@ -759,21 +758,21 @@ bmp_peer_init(struct bmp_proto *p, ea_list *bgp_attr)
 
   if (in_state == BS_ESTABLISHED)
   {
-    const byte *loc_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_local_open_msg)->data;
-    int loc = ea_get_adata(bgp_attr, &ea_bgp_in_conn_local_open_msg)->length;
-    const byte *rem_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_remote_open_msg)->data;
-    int rem = ea_get_adata(bgp_attr, &ea_bgp_in_conn_remote_open_msg)->length;
-    if (loc && rem)
-      bmp_peer_up_(p, bgp_attr, false, loc_open, loc, rem_open, rem);
+    ASSERT_DIE(out_state != BS_ESTABLISHED);
+
+    const adata *loc_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_local_open_msg);
+    const adata *rem_open = ea_get_adata(bgp_attr, &ea_bgp_in_conn_remote_open_msg);
+
+    ASSERT_DIE(loc_open && rem_open);
+    bmp_peer_up_(p, bgp_attr, false, loc_open, rem_open);
   }
   else if (out_state == BS_ESTABLISHED)
   {
-    const byte *loc_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_local_open_msg)->data;
-    int loc = ea_get_adata(bgp_attr, &ea_bgp_out_conn_local_open_msg)->length;
-    const byte *rem_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_remote_open_msg)->data;
-    int rem = ea_get_adata(bgp_attr, &ea_bgp_out_conn_remote_open_msg)->length;
-    if (loc && rem)
-      bmp_peer_up_(p, bgp_attr, false, loc_open, loc, rem_open, rem);
+    const adata *loc_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_local_open_msg);
+    const adata *rem_open = ea_get_adata(bgp_attr, &ea_bgp_out_conn_remote_open_msg);
+
+    ASSERT_DIE(loc_open && rem_open);
+    bmp_peer_up_(p, bgp_attr, false, loc_open, rem_open);
   }
 }
 
@@ -811,8 +810,7 @@ bmp_is_peer_global_instance(ea_list *bgp)
 
 static void
 bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
-  const byte *tx_data, const size_t tx_data_size,
-  const byte *rx_data, const size_t rx_data_size)
+    const adata *tx_data, const adata *rx_data)
 {
   ASSERT(p->started);
 
@@ -829,8 +827,7 @@ bmp_send_peer_up_notif_msg(struct bmp_proto *p, ea_list *bgp,
 
   bmp_peer_up_notif_msg_serialize(&payload, is_global_instance_peer,
     rem_as, rem_id, 1,
-    sk->saddr, sk->daddr, sk->sport, sk->dport, tx_data, tx_data_size,
-    rx_data, rx_data_size);
+    sk->saddr, sk->daddr, sk->sport, sk->dport, tx_data, rx_data);
   bmp_schedule_tx_packet(p, bmp_buffer_data(&payload), bmp_buffer_pos(&payload));
   bmp_buffer_free(&payload);
 }
@@ -950,11 +947,17 @@ bmp_send_peer_down_notif_msg(struct bmp_proto *p, ea_list *bgp,
     remote_caps = out_as4;
 
   bool is_global_instance_peer = bmp_is_peer_global_instance(bgp);
-  buffer payload
-    = bmp_buffer_alloc(p->buffer_mpool, DEFAULT_MEM_BLOCK_SIZE);
-  bmp_peer_down_notif_msg_serialize(&payload, is_global_instance_peer,
-    ea_get_int(bgp, &ea_bgp_rem_as, 0), ea_get_int(bgp, &ea_bgp_rem_id, 0),
-    remote_caps, *((ip_addr*)ea_get_adata(bgp, &ea_bgp_rem_ip)->data), data, data_size);
+  buffer payload = bmp_buffer_alloc(p->buffer_mpool, DEFAULT_MEM_BLOCK_SIZE);
+  bmp_peer_down_notif_msg_serialize(
+      &payload,
+      is_global_instance_peer,
+      ea_get_int(bgp, &ea_bgp_rem_as, 0),
+      ea_get_int(bgp, &ea_bgp_rem_id, 0),
+      remote_caps,
+      *((ip_addr *) ea_get_adata(bgp, &ea_bgp_rem_ip)->data),
+      data,
+      data_size
+      );
   bmp_schedule_tx_packet(p, bmp_buffer_data(&payload), bmp_buffer_pos(&payload));
 
   bmp_buffer_free(&payload);
@@ -1355,22 +1358,19 @@ bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
 
   int in_state = ea_get_int(pupdate->proto_attr, &ea_bgp_in_conn_state, 0);
   int out_state = ea_get_int(pupdate->proto_attr, &ea_bgp_out_conn_state, 0);
-  const byte *tx_open_msg_in = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_local_open_msg)->data;
-  const byte *tx_open_msg_out = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_local_open_msg)->data;
 
-  if (in_state == BS_ESTABLISHED && tx_open_msg_in)
+  if (in_state == BS_ESTABLISHED)
   {
-    const byte *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_remote_open_msg)->data;
-    int l_len = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_local_open_msg)->length;
-    int r_len = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_remote_open_msg)->length;
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg_in, l_len, rx_open_msg, r_len);
+    ASSERT_DIE(out_state != BS_ESTABLISHED);
+    const adata *tx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_local_open_msg);
+    const adata *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_remote_open_msg);
+    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg, rx_open_msg);
   }
-  else if (out_state == BS_ESTABLISHED && tx_open_msg_out)
+  else if (out_state == BS_ESTABLISHED)
   {
-    const byte *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_remote_open_msg)->data;
-    int l_len = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_local_open_msg)->length;
-    int r_len = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_remote_open_msg)->length;
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg_out, l_len, rx_open_msg, r_len);
+    const adata *tx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_local_open_msg);
+    const adata *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_remote_open_msg);
+    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg, rx_open_msg);
   }
   else if (ea_get_int(pupdate->proto_attr, &ea_bgp_close_bmp_set, 0))
   {
