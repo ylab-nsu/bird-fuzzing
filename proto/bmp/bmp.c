@@ -599,9 +599,14 @@ bmp_find_stream(struct bmp_proto *p, const struct bgp_proto *bgp, u32 afi, bool 
 {
   ea_list *bgp_attr = proto_get_state(bgp->p.id);
   struct bmp_stream *s = HASH_FIND(p->stream_map, HASH_STREAM, bgp_attr, bmp_stream_key(afi, policy));
+
   while (s == NULL)
   {
-    bmp_process_proto_state_change(p, lfjour_get(&p->proto_state_reader));
+    struct lfjour_item *li = lfjour_get(&p->proto_state_reader);
+    if (!li)
+      return NULL;
+
+    bmp_process_proto_state_change(p, li);
     s = HASH_FIND(p->stream_map, HASH_STREAM, bgp_attr, bmp_stream_key(afi, policy));
   }
   return s;
@@ -862,7 +867,10 @@ bmp_route_monitor_notify(struct bmp_proto *p, struct bgp_proto *bgp_p, u32 afi, 
   if ((old == new->attrs) || old && new->attrs && ea_same(old, new->attrs))
     return;
 
+  /* No stream, probably flushed already */
   struct bmp_stream *bs = bmp_find_stream(p, bgp_p, afi, policy);
+  if (!bs)
+    return;
 
   byte buf[BGP_MAX_EXT_MSG_LENGTH];
   byte *end = bgp_bmp_encode_rte(bs->sender, bgp_p, buf, new);
@@ -1342,6 +1350,7 @@ bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
   struct proto_pending_update *pupdate = SKIP_BACK(struct proto_pending_update, li, last_up);
   if (!pupdate)
     return;
+
   int id = ea_get_int(pupdate->proto_attr, &ea_proto_id, 0);
 
   int in_state = ea_get_int(pupdate->proto_attr, &ea_bgp_in_conn_state, 0);

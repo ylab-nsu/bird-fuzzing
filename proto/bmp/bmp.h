@@ -88,6 +88,7 @@ struct bmp_stream {
   ea_list *bgp;
   u32 key;
   bool sync;
+  bool shutting_down;
   struct bmp_stream *next;
   struct bmp_table *table;
   ea_list *sender;
