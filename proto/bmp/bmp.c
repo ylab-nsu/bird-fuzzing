@@ -949,8 +949,7 @@ bmp_send_peer_down_notif_msg(struct bmp_proto *p, ea_list *bgp,
 }
 
 static void
-bmp_peer_down_(struct bmp_proto *p, ea_list *bgp,
-	       int err_class, int err_code, int err_subcode, const byte *data, int length)
+bmp_peer_down_(struct bmp_proto *p, ea_list *bgp, struct bgp_session_close_ad *bscad)
 {
   if (!p->started)
     return;
@@ -964,7 +963,7 @@ bmp_peer_down_(struct bmp_proto *p, ea_list *bgp,
   uint bmp_code = 0;
   uint fsm_code = 0;
 
-  switch (err_class)
+  switch (bscad->last_error_class)
   {
   case BE_BGP_RX:
     bmp_code = BMP_PEER_DOWN_REASON_REMOTE_BGP_NOTIFICATION;
@@ -978,10 +977,10 @@ bmp_peer_down_(struct bmp_proto *p, ea_list *bgp,
 
   default:
     bmp_code = BMP_PEER_DOWN_REASON_REMOTE_NO_NOTIFICATION;
-    length = 0;
     break;
   }
 
+  uint length = bscad->ad.length - sizeof *bscad + sizeof bscad->ad;
   buffer payload = bmp_buffer_alloc(p->buffer_mpool, 1 + BGP_HEADER_LENGTH + 2 + length);
   bmp_put_u8(&payload, bmp_code);
 
@@ -990,9 +989,9 @@ bmp_peer_down_(struct bmp_proto *p, ea_list *bgp,
   case BMP_PEER_DOWN_REASON_LOCAL_BGP_NOTIFICATION:
   case BMP_PEER_DOWN_REASON_REMOTE_BGP_NOTIFICATION:
     bmp_put_bgp_hdr(&payload, BGP_HEADER_LENGTH + 2 + length, PKT_NOTIFICATION);
-    bmp_put_u8(&payload, err_code);
-    bmp_put_u8(&payload, err_subcode);
-    bmp_put_data(&payload, data, length);
+    bmp_put_u8(&payload, bscad->notify_code);
+    bmp_put_u8(&payload, bscad->notify_subcode);
+    bmp_put_data(&payload, bscad->data, length);
     break;
 
   case BMP_PEER_DOWN_REASON_LOCAL_NO_NOTIFICATION:
@@ -1076,8 +1075,6 @@ bmp_check_routes(void *bt_)
 
   RT_EXPORT_WALK(&bt->out_req, u)
   {
-    log("export walk, kind %d", u->kind);
-
     switch (u->kind)
     {
       case RT_EXPORT_STOP:
@@ -1341,15 +1338,16 @@ bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
     return;
 
   if (bmp_peer_up_inout(p, ppu->proto_attr, true))
-    ;
+    goto done;
 
-  else if (ea_get_int(ppu->proto_attr, &ea_bgp_close_bmp_set, 0))
+  SKIP_BACK_DECLARE(struct bgp_session_close_ad, bscad, ad, ea_get_adata(ppu->proto_attr, &ea_bgp_close_bmp));
+  if (bscad)
   {
-    struct closing_bgp *closing = (struct closing_bgp *) ea_get_ptr(ppu->proto_attr, &ea_protocol_type, 0);
-    bmp_peer_down_(p, ppu->proto_attr,
-	      closing->err_class, closing->err_code, closing->err_subcode, closing->data, closing->length);
+    bmp_peer_down_(p, ppu->proto_attr, bscad);
+    goto done;
   }
 
+done:
   lfjour_release(&p->proto_state_reader, last_up);
 }
 
