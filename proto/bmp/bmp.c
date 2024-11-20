@@ -1306,7 +1306,8 @@ bmp_sock_err(sock *sk, int err)
   bmp_close_socket(p);
   tm_start_in(p->connect_retry_timer, CONNECT_RETRY_TIME, p->p.loop);
 
-  proto_notify_state(&p->p, PS_START);
+  if (p->p.proto_state == PS_UP)
+    proto_notify_state(&p->p, PS_START);
 }
 
 /* BMP connect timeout event - switch from Idle/Connect state to Connect state */
@@ -1350,34 +1351,37 @@ bmp_postconfig(struct proto_config *CF)
 static void
 bmp_process_proto_state_change(struct bmp_proto *p, struct lfjour_item *last_up)
 {
-  struct proto_pending_update *pupdate = SKIP_BACK(struct proto_pending_update, li, last_up);
-  if (!pupdate)
+  struct proto_pending_update *ppu = SKIP_BACK(struct proto_pending_update, li, last_up);
+  if (!ppu)
     return;
 
-  int id = ea_get_int(pupdate->proto_attr, &ea_proto_id, 0);
+  int id = ea_get_int(ppu->proto_attr, &ea_proto_id, 0);
 
-  int in_state = ea_get_int(pupdate->proto_attr, &ea_bgp_in_conn_state, 0);
-  int out_state = ea_get_int(pupdate->proto_attr, &ea_bgp_out_conn_state, 0);
+  int in_state = ea_get_int(ppu->proto_attr, &ea_bgp_in_conn_state, 0);
+  int out_state = ea_get_int(ppu->proto_attr, &ea_bgp_out_conn_state, 0);
 
   if (in_state == BS_ESTABLISHED)
   {
     ASSERT_DIE(out_state != BS_ESTABLISHED);
-    const adata *tx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_local_open_msg);
-    const adata *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_in_conn_remote_open_msg);
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg, rx_open_msg);
+    const adata *tx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_in_conn_local_open_msg);
+    const adata *rx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_in_conn_remote_open_msg);
+    bmp_peer_up_(p, proto_get_state(id), true, tx_open, rx_open);
   }
+
   else if (out_state == BS_ESTABLISHED)
   {
-    const adata *tx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_local_open_msg);
-    const adata *rx_open_msg = ea_get_adata(pupdate->proto_attr, &ea_bgp_out_conn_remote_open_msg);
-    bmp_peer_up_(p, proto_get_state(id), true, tx_open_msg, rx_open_msg);
+    const adata *tx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_out_conn_local_open_msg);
+    const adata *rx_open = ea_get_adata(ppu->proto_attr, &ea_bgp_out_conn_remote_open_msg);
+    bmp_peer_up_(p, proto_get_state(id), true, tx_open, rx_open);
   }
-  else if (ea_get_int(pupdate->proto_attr, &ea_bgp_close_bmp_set, 0))
+
+  else if (ea_get_int(ppu->proto_attr, &ea_bgp_close_bmp_set, 0))
   {
-    struct closing_bgp *closing = (struct closing_bgp *) ea_get_ptr(pupdate->proto_attr, &ea_protocol_type, 0);
+    struct closing_bgp *closing = (struct closing_bgp *) ea_get_ptr(ppu->proto_attr, &ea_protocol_type, 0);
     bmp_peer_down_(p, proto_get_state(id),
 	      closing->err_class, closing->err_code, closing->err_subcode, closing->data, closing->length);
   }
+
   lfjour_release(&p->proto_state_reader, last_up);
 }
 
