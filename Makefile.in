@@ -76,7 +76,7 @@ cli: $(client)
 $(daemon): LIBS += $(DAEMON_LIBS)
 
 # Include directories
-dirs := client conf doc filter lib nest test $(addprefix proto/,$(protocols)) @sysdep_dirs@
+dirs := client conf doc filter lib nest nest/fuzz test $(addprefix proto/,$(protocols)) @sysdep_dirs@
 
 # conf/Makefile declarations needed for all other modules
 conf-lex-targets := $(addprefix $(objdir)/conf/,cf-lex.o)
@@ -85,6 +85,7 @@ cf-local = $(conf-y-targets): $(s)config.Y
 
 src-o-files = $(patsubst %.c,$(o)%.o,$(src))
 tests-target-files = $(patsubst %.c,$(o)%,$(tests_src))
+fuzz-target-files = $(patsubst %.c,$(o)%,$(fuzz_src))
 
 all-daemon = $(daemon): $(obj)
 all-client = $(client): $(obj)
@@ -181,9 +182,17 @@ $(tests_targets): LIBS += $(DAEMON_LIBS)
 $(tests_targets_ok): %.ok: %
 	$(Q)$* 2>/dev/null && touch $*.ok
 
+$(fuzz_targets): %: %.o $(fuzz_objs) $(tests_objs) | prepare
+	$(E)echo LD $(LDFLAGS) -o $@ $< "..." $(LIBS)
+	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+$(fuzz_targets): LDFLAGS += -fsanitize=fuzzer
+$(fuzz_targets): LIBS += $(DAEMON_LIBS)
+
 test: testsclean check
 check: tests tests_run
 tests: $(tests_targets)
+fuzz_tests: $(fuzz_targets)
 tests_run: $(tests_targets_ok)
 
 STATIC_CHECKERS_ENABLE := nullability.NullableDereferenced nullability.NullablePassedToNonnull nullability.NullableReturnedFromNonnull optin.portability.UnixAPI valist.CopyToSelf valist.Uninitialized valist.Unterminated
