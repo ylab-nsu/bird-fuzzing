@@ -26,7 +26,7 @@ static inline int net_match(struct test_node *tn, net_addr *query, net_addr *dat
 }
 
 
-static int
+int
 t_match_random_net(const uint8_t *Data, size_t Size)
 {
   bt_bird_init();
