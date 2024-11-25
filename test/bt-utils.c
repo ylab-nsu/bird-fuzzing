@@ -259,6 +259,29 @@ bt_random_nets(int type, uint n)
 }
 
 net_addr *
+bt_random_nets_from_data(int type, uint n, const uint8_t *Data, size_t Size) {
+  if (Size % 5 != 0) {
+    return NULL;
+  }
+
+  net_addr *nets = tmp_alloc(n * sizeof(net_addr));
+
+  int index = 0;
+  for (uint i = 0; i < n; i++) {
+    uint pxlen = ((u32)Data[index++] % 24) + 8;
+    u32 ip_data = 0;
+    for (int j = 0; j < 4; j++) {
+      ip_data = (ip_data << 8) | (u32)Data[index++]; // Сдвигаем и добавляем каждый байт
+    }
+    ip4_addr ip4 = ip_data;
+    net_fill_ip4(&nets[i], ip4_and(ip4, ip4_mkmask(pxlen)), pxlen);
+  }
+
+  return nets;
+}
+
+
+net_addr *
 bt_random_net_subset(net_addr *src, uint sn, uint dn)
 {
   net_addr *nets = tmp_alloc(dn * sizeof(net_addr));
