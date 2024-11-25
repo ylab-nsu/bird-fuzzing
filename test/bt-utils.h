@@ -28,6 +28,7 @@ uint bt_naive_pow(uint base, uint power);
 void bt_bytes_to_hex(char *buf, const byte *in_data, size_t size);
 void bt_random_net(net_addr *net, int type);
 net_addr *bt_random_nets(int type, uint n);
+net_addr *bt_random_nets_from_data(int type, uint n, const uint8_t *Data, size_t Size);
 net_addr *bt_random_net_subset(net_addr *src, uint sn, uint dn);
 void bt_read_net(const char *str, net_addr *net, int type);
 net_addr *bt_read_nets(FILE *f, int type, uint *n);
