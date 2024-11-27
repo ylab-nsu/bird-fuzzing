@@ -29,9 +29,8 @@ static inline int net_match(struct test_node *tn, net_addr *query, net_addr *dat
 int
 t_match_random_net(const uint8_t *Data, size_t Size)
 {
-  bt_bird_init();
-  bt_config_parse(BT_CONFIG_SIMPLE);
-
+  
+  
 
   int type = NET_IP4;
 
