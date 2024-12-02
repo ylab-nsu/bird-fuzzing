@@ -1,4 +1,4 @@
-src := #rt_fib_test_my.c
+src := rt_fib_test_my.c
 obj := $(src-o-files)
 
 
