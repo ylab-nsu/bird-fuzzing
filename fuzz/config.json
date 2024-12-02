@@ -1,0 +1,9 @@
+{
+    "BIRD_CON_NAME": "bird1a",
+    "BGP_PROTO_NAME": "uplink",
+    "BIRD_ASN_ID": 65002,
+    "HOST_BGP_ID": "172.18.0.1",
+    "PARAM_HOLD_TIME": 180,
+    "BIRD_BGP_ID": "172.18.0.2",
+    "BIRD_BGP_PORT": 179
+}
