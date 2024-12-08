@@ -30,7 +30,8 @@ int
 t_match_random_net(const uint8_t *Data, size_t Size)
 {
   
-  
+  bt_bird_init();
+  bt_config_parse(BT_CONFIG_SIMPLE);
 
   int type = NET_IP4;
 
@@ -68,8 +69,5 @@ t_match_random_net(const uint8_t *Data, size_t Size)
 
   rfree(p);
   tmp_flush();
-
-
-  bt_bird_cleanup();
   return 1;
 }
