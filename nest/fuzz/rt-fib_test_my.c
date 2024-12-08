@@ -6,7 +6,7 @@
  *	Can be freely distributed and used under the terms of the GNU GPL.
  */
 
-#include "rt_fib_test_my.h"
+#include "rt-fib_test_my.h"
 
 #define TESTS_NUM		10
 #define PREFIXES_NUM 		  400000
