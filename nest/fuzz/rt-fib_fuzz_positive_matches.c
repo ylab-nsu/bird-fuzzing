@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-#include "rt-fib_test_my.h"
+#include "rt-fib_fuzz_utils.h"
 
 int state = 0;
 
