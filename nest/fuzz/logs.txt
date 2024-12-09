@@ -1,0 +1,41 @@
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 730308733
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: A corpus is not provided, starting from an empty corpus
+#2      INITED exec/s: 0 rss: 30Mb
+WARNING: no interesting inputs were found so far. Is the code instrumented for coverage?
+This may also happen if the target rejected all inputs we tried so far
+==171969== ERROR: libFuzzer: out-of-memory (used: 8243Mb; limit: 8192Mb)
+   To change the out-of-memory limit use -rss_limit_mb=<N>
+
+MS: 5 ShuffleBytes-InsertRepeatedBytes-InsertByte-InsertByte-ChangeASCIIInt-; base unit: adc83b19e793491b1c6ea0fd8b46cd9f32e592fc
+0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0xe8,0x31,0xb7,0xa,
+\350\350\350\350\350\350\350\350\350\350\350\350\350\350\350\350\3501\267\012
+artifact_prefix='./'; Test unit written to ./oom-e3f95bf3caa275b9956bb2337a8fc4a2e7a8a706
+Base64: 6Ojo6Ojo6Ojo6Ojo6Ojo6Ogxtwo=
+SUMMARY: libFuzzer: out-of-memory
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 1321811790
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: A corpus is not provided, starting from an empty corpus
+#2      INITED exec/s: 0 rss: 30Mb
+WARNING: no interesting inputs were found so far. Is the code instrumented for coverage?
+This may also happen if the target rejected all inputs we tried so far
+==172870== ERROR: libFuzzer: out-of-memory (used: 8219Mb; limit: 8192Mb)
+   To change the out-of-memory limit use -rss_limit_mb=<N>
+
+MS: 2 InsertRepeatedBytes-ChangeBit-; base unit: adc83b19e793491b1c6ea0fd8b46cd9f32e592fc
+0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x20,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xa,
+\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000 \000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\000\012
+artifact_prefix='./'; Test unit written to ./oom-c684f602bcc7763cb9f92d73cfb22db271ada120
+Base64: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACg==
+SUMMARY: libFuzzer: out-of-memory
+INFO: Running with entropic power schedule (0xFF, 100).
+INFO: Seed: 2526918815
+INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
+INFO: A corpus is not provided, starting from an empty corpus
+#2      INITED exec/s: 0 rss: 30Mb
+WARNING: no interesting inputs were found so far. Is the code instrumented for coverage?
+This may also happen if the target rejected all inputs we tried so far
+#65536  pulse  corp: 1/1b lim: 652 exec/s: 3276 rss: 78Mb
+^C==174338== libFuzzer: run interrupted; exiting
