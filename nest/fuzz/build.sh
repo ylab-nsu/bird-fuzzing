@@ -1,6 +1,10 @@
 #!/bin/bash
 
 SKIP_STEPS=("$@")
+# launch commands from root of project
+SCRIPT_DIR="$(dirname "$(realpath "$0")")"
+cd $SCRIPT_DIR 
+cd ../..
 
 # skip check function
 should_skip() {
@@ -40,7 +44,6 @@ redirect_output() {
         stdout_redirect="1>/dev/null"
     fi
 
-    
     if should_hide_stderr; then
         stderr_redirect="2>/dev/null"
     fi
@@ -48,24 +51,33 @@ redirect_output() {
     eval "$command $stdout_redirect $stderr_redirect"
 }
 
+print_time() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+
+
+
+
 
 if ! should_skip 1; then
-    echo "STEP_1: CC=clang ./configure --prefix=$PWD/out --disable-client"
+    echo "$(print_time) STEP_1: CC=clang ./configure --prefix=$PWD/out --disable-client"
     redirect_output "CC=clang ./configure --prefix=$PWD/out --disable-client"
 else
-    echo "STEP_1: SKIP"
+    echo "$(print_time) STEP_1: SKIP"
 fi
 
 if ! should_skip 2; then
-    echo "STEP_2: make"
+    echo "$(print_time) STEP_2: make"
     redirect_output "make"
 else
-    echo "STEP_2: SKIP"
+    echo "$(print_time) STEP_2: SKIP"
 fi
 
 if ! should_skip 3; then
-    echo "STEP_3: make fuzz_tests"
+    echo "$(print_time) STEP_3: make fuzz_tests"
     redirect_output "make fuzz_tests"
 else
-    echo "STEP_3: SKIP"
+    echo "$(print_time) STEP_3: SKIP"
 fi
+
