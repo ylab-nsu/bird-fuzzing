@@ -56,10 +56,6 @@ print_time() {
 }
 
 
-
-
-
-
 if ! should_skip 1; then
     echo "$(print_time) STEP_1: CC=clang ./configure --prefix=$PWD/out --disable-client"
     redirect_output "CC=clang ./configure --prefix=$PWD/out --disable-client"
