@@ -13,7 +13,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if ((Size % 5 != 0) || (Size == 0)) {
     return -1;
   }
-  t_match_random_net_positive(Data, Size)
+  t_match_random_net_positive(Data, Size);
   return 0;
 }
 

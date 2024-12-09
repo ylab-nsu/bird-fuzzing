@@ -46,7 +46,9 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size)
   for (int i = 0; i < number_of_ips; i++)
   {
     struct test_node *tn = fib_get(&f, &nets[i]);
-    bt_assert(!tn->pos || net_match(tn, &nets[i], nets));
+    if (tn->pos && !net_match(tn, &nets[i], nets)) {
+      __builtin_trap();
+    }
     tn->pos = i;
   }
     
@@ -54,7 +56,9 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size)
   for (int j = 0; j < Size / 5; j++)
   {
     struct test_node *tn = fib_find(&f, &nets[j]);
-    bt_assert(tn && net_match(tn, &nets[j], nets));
+    if (!tn || !net_match(tn, &nets[j], nets)) {
+      __builtin_trap();
+    }
   }
 
   rfree(p);
@@ -82,7 +86,9 @@ t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
   for (int i = 0; i < number_of_ips; i++)
   {
     struct test_node *tn = fib_get(&f, &nets[i]);
-    bt_assert(!tn->pos || net_match(tn, &nets[i], nets));
+    if (tn->pos && !net_match(tn, &nets[i], nets)) {
+      __builtin_trap();
+    }
     tn->pos = i;
   }
 
@@ -93,7 +99,9 @@ t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
     bt_random_net(&net, type);
 
     struct test_node *tn = fib_find(&f, &net);
-    bt_assert(!tn || net_match(tn, &net, nets));
+    if (tn && !net_match(tn, &net, nets)) {
+      __builtin_trap();
+    }
   }
 
   rfree(p);
@@ -125,10 +133,10 @@ t_match_random_net_only_negative(const uint8_t *Data, size_t Size)
   net_addr *net = bt_random_nets_from_data(type, number_of_ips, Data, Size);
   for (int i = 0; i < number_of_ips; i++) {
     struct test_node *tn = fib_find(&f, &net[i]);
-    bt_assert(!tn);
+    if (tn) {
+      __builtin_trap();
+    }
   }
-
-  
 
   rfree(p);
   tmp_flush();
