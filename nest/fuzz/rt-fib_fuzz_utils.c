@@ -63,7 +63,7 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size)
 }
 
 int
-t_match_random_net_negative(const uint8_t *Data, size_t Size)
+t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
 {
   bt_bird_init();
   bt_config_parse(BT_CONFIG_SIMPLE);
@@ -96,6 +96,39 @@ t_match_random_net_negative(const uint8_t *Data, size_t Size)
     bt_assert(!tn || net_match(tn, &net, nets));
   }
 
+  rfree(p);
+  tmp_flush();
+  return 0;
+}
+
+
+int
+t_match_random_net_only_negative(const uint8_t *Data, size_t Size)
+{
+  bt_bird_init();
+  bt_config_parse(BT_CONFIG_SIMPLE);
+
+  int type = NET_IP4;
+
+  pool *p = rp_new(&root_pool, "FIB pool");
+
+  
+  net_addr *nets = tmp_alloc(0 * sizeof(net_addr));//empty structure
+
+  /* init block */
+  struct fib f;
+  fib_init(&f, &root_pool, type, sizeof(struct test_node), OFFSETOF(struct test_node, n), 4, NULL);
+
+
+  /*Test (only) negative matches */
+  int number_of_ips = Size / 5;
+  net_addr *net = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+  for (int i = 0; i < number_of_ips; i++) {
+    struct test_node *tn = fib_find(&f, &net[i]);
+    bt_assert(!tn);
+  }
+
+  
 
   rfree(p);
   tmp_flush();
