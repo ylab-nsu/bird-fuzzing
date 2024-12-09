@@ -27,40 +27,30 @@ static inline int net_match(struct test_node *tn, net_addr *query, net_addr *dat
 
 
 int
-t_match_random_net(const uint8_t *Data, size_t Size)
+t_match_random_net_positive(const uint8_t *Data, size_t Size)
 {
-  
   bt_bird_init();
   bt_config_parse(BT_CONFIG_SIMPLE);
 
   int type = NET_IP4;
 
   pool *p = rp_new(&root_pool, "FIB pool");
-  net_addr *nets = bt_random_nets_from_data(type, Size / 5, Data, Size);
 
-  /* Make FIB structure */
+  int number_of_ips = Size / 5;
+  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+
+  /* init block */
   struct fib f;
   fib_init(&f, &root_pool, type, sizeof(struct test_node), OFFSETOF(struct test_node, n), 4, NULL);
 
-  for (int i = 0; i < Size / 5; i++)
+  for (int i = 0; i < number_of_ips; i++)
   {
     struct test_node *tn = fib_get(&f, &nets[i]);
     bt_assert(!tn->pos || net_match(tn, &nets[i], nets));
     tn->pos = i;
   }
-
-//тест негативных матчей вынести в отедльный тест
-    /* Test (mostly) negative matches */
-    // for (int i = 0; i < PREFIX_TESTS_NUM; i++)
-    // {
-    //   net_addr net;
-    //   bt_random_net(&net, type);
-
-    //   struct test_node *tn = fib_find(&f, &net);
-    //   bt_assert(!tn || net_match(tn, &net, nets));
-    // }
-
-    /* Test positive matches */
+    
+  /* Test positive matches */
   for (int j = 0; j < Size / 5; j++)
   {
     struct test_node *tn = fib_find(&f, &nets[j]);
@@ -69,5 +59,45 @@ t_match_random_net(const uint8_t *Data, size_t Size)
 
   rfree(p);
   tmp_flush();
-  return 1;
+  return 0;
+}
+
+int
+t_match_random_net_negative(const uint8_t *Data, size_t Size)
+{
+  bt_bird_init();
+  bt_config_parse(BT_CONFIG_SIMPLE);
+
+  int type = NET_IP4;
+
+  pool *p = rp_new(&root_pool, "FIB pool");
+
+  int number_of_ips = Size / 5;
+  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+
+  /* init block */
+  struct fib f;
+  fib_init(&f, &root_pool, type, sizeof(struct test_node), OFFSETOF(struct test_node, n), 4, NULL);
+
+  for (int i = 0; i < number_of_ips; i++)
+  {
+    struct test_node *tn = fib_get(&f, &nets[i]);
+    bt_assert(!tn->pos || net_match(tn, &nets[i], nets));
+    tn->pos = i;
+  }
+
+  /*Test (mostly) negative matches */
+  for (int i = 0; i < PREFIX_TESTS_NUM; i++)
+  {
+    net_addr net;
+    bt_random_net(&net, type);
+
+    struct test_node *tn = fib_find(&f, &net);
+    bt_assert(!tn || net_match(tn, &net, nets));
+  }
+
+
+  rfree(p);
+  tmp_flush();
+  return 0;
 }
