@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   bird:
-    image: ungleich/bird:3.20.1-2.15.1
+    build:
+      context: ./bird_configs
     container_name: bird-container-test
     networks:
       bird_network:
