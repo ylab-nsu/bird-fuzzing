@@ -13,10 +13,6 @@ MAX_HOLD_TIME = 65535
 MAX_BGP_ID = 0xFFFFFFFF
 DEFAULT_HOLD_TIME = 90
 
-# Настройка логирования
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
-
 class BGPFuzzOpenMessage(BGFuzzTest):
     def __init__(self, config_file):
         super().__init__(config_file)
@@ -176,7 +172,14 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
+        s_initialize('BGP_KEEPALIVE')                                                                        
+        with s_block('Header'):                                                                                     
+            s_static(name='marker', value=b'\xff'*16)                                                               
+            s_static(name='length', value=b'\x00\x13')                            
+            s_static(name='type', value=b'\x04')  
+
         self.session.connect(s_get('bgp_open'))
+        self.session.connect(s_get('bgp_open'), s_get('BGP_KEEPALIVE'))
         self.session.fuzz()
 
     def fuzz_open_identifier(self):
