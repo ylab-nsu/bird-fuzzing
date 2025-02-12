@@ -12,7 +12,7 @@
 #include "nest/route.h"
 
 
-#define TESTS_NUM		10
+#define TESTS_NUM		100
 #define PREFIXES_NUM 		400000
 #define PREFIX_TESTS_NUM 	200000
 #define PREFIX_BENCH_MAX 	1000000
