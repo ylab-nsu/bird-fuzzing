@@ -14,7 +14,7 @@ def execute_command(host, port, username, password, command):
 
 if __name__ == "__main__":
     # Настройки подключения
-    host = "192.168.100.10"  # IP bird-контейнера
+    host = '172.18.0.2'  # IP bird-контейнера
     port = 22
     username = "root"
     password = "password"

@@ -13,7 +13,7 @@ class BGFuzzTest:
         self.BIRD_BGP_ID = config['BIRD_BGP_ID']
         self.BIRD_BGP_PORT = config['BIRD_BGP_PORT']
         self.HOST_BGP_ID = config['HOST_BGP_ID']
-        self.BIRD_ASN_ID = config['BIRD_ASN_ID']
+        self.FUZZER_ASN_ID = config['FUZZER_ASN_ID']
         self.PARAM_HOLD_TIME = config['PARAM_HOLD_TIME']
         self.BIRD_CON_NAME = config['BIRD_CON_NAME']
         self.BGP_PROTO_NAME = config['BGP_PROTO_NAME']

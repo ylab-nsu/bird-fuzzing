@@ -1,9 +1,7 @@
 import random
-import logging
 from boofuzz import *
 from bgp_fuzz_test import BGFuzzTest
 
-# Константы
 BGP_HEADER_SIZE = 16
 BGP_VERSION = 0x04
 BGP_TYPE = 0x01
@@ -33,7 +31,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=b'\xff', endian='>', name='Non-Ext OP Len', fuzzable=False)
@@ -65,7 +63,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=b'\x00', endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=True)
@@ -84,7 +82,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 with s_block('Optional Parameters'):
@@ -103,7 +101,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             with s_block('Open'):
                 # Fuzz the version field
                 s_byte(value=random.choice([0x01, 0x04, 0xFF]), endian=BIG_ENDIAN, name='Version', fuzzable=True)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
@@ -125,7 +123,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             s_byte(value=BGP_TYPE, endian=BIG_ENDIAN, name='Type', fuzzable=False)
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
@@ -164,7 +162,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 # Fuzz Hold Time field
                 s_word(value=random.randint(0, MAX_HOLD_TIME), endian=BIG_ENDIAN, name='Hold Time', fuzzable=True)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
@@ -191,7 +189,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 # Fuzz BGP Identifier field with invalid values
                 s_dword(value=random.randint(0, MAX_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=True)
@@ -210,14 +208,12 @@ class BGPFuzzOpenMessage(BGFuzzTest):
         with s_block('BGP'):
             with s_block('Header'):
                 s_bytes(value=b'\xFF'*16, padding=b'\xFF', size=16, name='Marker', fuzzable=False)
-                
                 s_size(block_name='Open', length=2, math=lambda x: x + 19, name='Length', endian=BIG_ENDIAN, fuzzable=True)
-                
                 s_byte(value=0x01, endian=BIG_ENDIAN, name='Type', fuzzable=False)
             
             with s_block('Open'):
                 s_byte(value=random.choice([0x00, 0xFF, 0x01, 0x04]), endian=BIG_ENDIAN, name='Version', fuzzable=True)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
@@ -235,7 +231,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             
             with s_block('Open'):
                 s_byte(value=0x04, endian=BIG_ENDIAN, name='Version', fuzzable=False)
-                s_word(value=self.BIRD_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
+                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
