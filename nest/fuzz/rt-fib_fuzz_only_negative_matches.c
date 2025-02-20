@@ -5,11 +5,11 @@
 int state = 0;
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  
-
   if (state == 0) {
-    char *arr[] = {""};
+    char *arr[] = {"./obj/nest/fuzz/rt-fib_fuzz_natches.c"};
     bt_init(1, arr);
+    bt_bird_init();
+    bt_config_parse(BT_CONFIG_SIMPLE);
     state = 1;
   } 
 
