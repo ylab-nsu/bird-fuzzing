@@ -9,6 +9,6 @@
 #include "nest/attrs.h"
 #include "lib/resource.h"
 #include "filter/data.h"
-
+#include "lib/resource.h"
 
 int fuzz_as_path_match(uint8_t *data, size_t size);

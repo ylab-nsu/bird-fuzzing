@@ -33,22 +33,19 @@ fuzz_as_path_match(uint8_t *data, size_t size) {
     }
 
     if (!as_path_match(as_path, mask)) {
-        free(mask);
         __builtin_trap();
     }
 
     uint32_t asn;
     if (!as_path_get_first(as_path, &asn) || asn != last_prepended) {
-        free(mask);
-        __builtin_trap();
-  
+        __builtin_trap();  
     }
 
     if (!as_path_get_last(as_path, &asn) || asn != first_prepended) {
-        free(mask);
         __builtin_trap();
- 
     }
+
+    lp_flush(tmp_linpool);
 
     return 0;  
 }
