@@ -1,8 +1,10 @@
-import subprocess
 import socket
 from boofuzz import Session, Target, TCPSocketConnection
 import json
 import paramiko
+
+from fuzz.python_fuzz.custom_logger import CustomFuzzLogger
+
 
 class BGFuzzTest:
     def __init__(self, config_file):
@@ -17,15 +19,27 @@ class BGFuzzTest:
         self.PARAM_HOLD_TIME = config['PARAM_HOLD_TIME']
         self.BIRD_CON_NAME = config['BIRD_CON_NAME']
         self.BGP_PROTO_NAME = config['BGP_PROTO_NAME']
-        
+        self.BIRD_USER = 'root'
+        self.BIRD_IP = config['BIRD_BGP_ID']
+        self.BIRD_PASSWORD = 'password'
+        self.log_file = "logs.txt"
+        self.max_tests = 100
+        self.test_counter = 0
+
+        self.logger = CustomFuzzLogger(self.log_file)
+
         self.session = Session(
             target=Target(
                 connection=TCPSocketConnection(host=self.BIRD_BGP_ID, port=self.BIRD_BGP_PORT)
             ),
+            index_start = 1,
+            index_end = self.max_tests,
             post_test_case_callbacks=[self.print_new_logs, self.restart_uplink],
+            fuzz_loggers=[self.logger]  # Используем кастомный логгер
         )
 
-    def ip_str_to_bytes(self, ip):
+    @staticmethod
+    def ip_str_to_bytes(ip):
         """Transformation IP-address to bytes."""
         return int.from_bytes(socket.inet_aton(ip), 'big')
     
@@ -49,7 +63,9 @@ class BGFuzzTest:
                 stdin, stdout, stderr = client.exec_command('tail -n1 /var/log/bird.log')  # Выполняем команду в контейнере
                 log_entry = stdout.read().decode().strip()  # Получаем строку из вывода
                 if log_entry:  # Если строка не пуста, выводим её
-                    print(log_entry)
+                    # Открываем файл для дозаписи и записываем лог
+                    with open(self.log_file, "a", encoding="utf-8") as f:
+                        f.write(log_entry + "\n")
                 client.close()  # Закрываем соединение
         except Exception as e:
             print(f"Failed to read logs of container with bird via SSH: {e}")
@@ -61,9 +77,9 @@ class BGFuzzTest:
             client = self.get_ssh_client()
             if client:
                 stdin, stdout, stderr = client.exec_command(f'birdc restart {self.BGP_PROTO_NAME}')  # Выполняем команду в контейнере
-                result = stdout.read().decode().strip()
-                if result:
-                    print(f"Restart result: {result}")
+                #result = stdout.read().decode().strip()
+                #if result:
+                    #print(f"Restart result: {result}")
                 client.close()  # Закрываем соединение
         except Exception as e:
             print(f"Failed to restart BGP_PROTO_NAME via SSH: {e}")

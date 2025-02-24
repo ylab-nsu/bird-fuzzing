@@ -24,4 +24,4 @@ bgp_test3 = BgpUpdateFuzzer('config.json')
 # bgp_test3.update_test_fuzz_withdrawn_routes()
 # bgp_test3.update_test_fuzz_path_attributes_length()
 # bgp_test3.update_test_fuzz_path_attributes() # посмотреть что там
-bgp_test3.update_test_fuzz_nlri()
+# bgp_test3.update_test_fuzz_nlri()

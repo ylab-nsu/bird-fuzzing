@@ -1,4 +1,4 @@
-import random
+import random, time
 from boofuzz import *
 from bgp_fuzz_test import BGFuzzTest
 
@@ -151,7 +151,16 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_static(value=b'', name='Params')
 
         self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        # Добавляем замер времени и статуса
+        start_time = time.time()  # Запоминаем время начала
+        try:
+            self.session.fuzz()
+            status = "Success"
+        except Exception as e:
+            status = f"Failed: {e}"
+        finally:
+            elapsed_time = time.time() - start_time  # Вычисляем затраченное время
+            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
 
     def fuzz_open_hold_time(self):
         '''
