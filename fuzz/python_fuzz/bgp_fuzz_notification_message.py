@@ -1,5 +1,7 @@
 import random
 import logging
+import time
+
 from boofuzz import *
 from bgp_fuzz_test import BGFuzzTest
 
@@ -24,4 +26,14 @@ class BGPFuzzNotificationMessage(BGFuzzTest):
                 s_random(name='data', min_length=0, max_length=4096, num_mutations=4096, fuzzable=True)
 
         self.session.connect(s_get("BGP_NOTIFICATION"))
-        self.session.fuzz()
+
+        # Добавляем замер времени и статуса
+        start_time = time.time()  # Запоминаем время начала
+        try:
+            self.session.fuzz()
+            status = "Success"
+        except Exception as e:
+            status = f"Failed: {e}"
+        finally:
+            elapsed_time = time.time() - start_time  # Вычисляем затраченное время
+            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")

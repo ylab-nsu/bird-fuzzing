@@ -2,8 +2,7 @@ import socket
 from boofuzz import Session, Target, TCPSocketConnection
 import json
 import paramiko
-
-from fuzz.python_fuzz.custom_logger import CustomFuzzLogger
+from custom_logger import CustomFuzzLogger
 
 
 class BGFuzzTest:
@@ -34,6 +33,7 @@ class BGFuzzTest:
             ),
             index_start = 1,
             index_end = self.max_tests,
+            web_port = None,
             post_test_case_callbacks=[self.print_new_logs, self.restart_uplink],
             fuzz_loggers=[self.logger]  # Используем кастомный логгер
         )

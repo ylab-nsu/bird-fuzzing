@@ -15,7 +15,20 @@ class BGPFuzzOpenMessage(BGFuzzTest):
     def __init__(self, config_file):
         super().__init__(config_file)
 
-    def initialize_bgp_header(self, block_name):
+    def fuzz(self):
+        # Добавляем замер времени и статуса
+        start_time = time.time()  # Запоминаем время начала
+        try:
+            self.session.fuzz()
+            status = "Success"
+        except Exception as e:
+            status = f"Failed: {e}"
+        finally:
+            elapsed_time = time.time() - start_time  # Вычисляем затраченное время
+            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
+
+    @staticmethod
+    def initialize_bgp_header(block_name):
         with s_block(block_name):
             s_bytes(value=b'\xFF' * BGP_HEADER_SIZE, padding=b'\xFF', size=BGP_HEADER_SIZE, name='Marker', fuzzable=False)
             s_size(block_name='Open', length=2, math=lambda x: x + 19, name='Length', endian=BIG_ENDIAN, fuzzable=False)
@@ -26,7 +39,8 @@ class BGPFuzzOpenMessage(BGFuzzTest):
         Fuzzes the BGP Open message with multiple optional parameters,
         each having a random payload.
         """
-        s_initialize('bgp_open')
+
+        s_initialize('bgp_open1')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -50,15 +64,15 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             with s_block('Keepalive'):
                 pass
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.connect(s_get('bgp_open'), s_get('bgp_keepalive'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open1'))
+        self.session.connect(s_get('bgp_open1'), s_get('bgp_keepalive'))
+        self.fuzz()
 
     def fuzz_bgp_open_optional_param_length(self):
         """
         Fuzzes the length of optional parameters (1 octet) and their payload.
         """
-        s_initialize('bgp_open')
+        s_initialize('bgp_open2')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -70,14 +84,14 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             with s_block('Optional Parameters'):
                 s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=4096, fuzzable=True)
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open2'))
+        self.fuzz()
 
     def fuzz_bgp_open_random_params(self):
         """
         Fuzzes optional parameters with random payload and length.
         """
-        s_initialize('bgp_open')
+        s_initialize('bgp_open3')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -88,19 +102,19 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=4096, fuzzable=True)
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open3'))
+        self.fuzz()
 
     def fuzz_bgp_open_version_field(self):
         """
         Fuzzes the BGP version field with random and boundary values.
         """
-        s_initialize('bgp_open')
+        s_initialize('bgp_open4')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 # Fuzz the version field
-                s_byte(value=random.choice([0x01, 0x04, 0xFF]), endian=BIG_ENDIAN, name='Version', fuzzable=True)
+                s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=True)
                 s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
@@ -108,14 +122,14 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open4'))
+        self.fuzz()
 
     def fuzz_bgp_open_length_mismatch(self):
         """
         Fuzzes the BGP header length to create a mismatch with the actual message size.
         """
-        s_initialize('bgp_open')
+        s_initialize('bgp_open5')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             # Fuzz the length field
@@ -130,14 +144,14 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open5'))
+        self.fuzz()
 
     def fuzz_open_asn(self):
-        '''
+        """
         Fuzz ASN field with boundary and random values.
-        '''
-        s_initialize('bgp_open')
+        """
+        s_initialize('bgp_open6')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -150,23 +164,15 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
-        self.session.connect(s_get('bgp_open'))
-        # Добавляем замер времени и статуса
-        start_time = time.time()  # Запоминаем время начала
-        try:
-            self.session.fuzz()
-            status = "Success"
-        except Exception as e:
-            status = f"Failed: {e}"
-        finally:
-            elapsed_time = time.time() - start_time  # Вычисляем затраченное время
-            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
+        self.session.connect(s_get('bgp_open6'))
+        self.fuzz()
+
 
     def fuzz_open_hold_time(self):
-        '''
+        """
         Fuzz Hold Time field with boundary and random values.
-        '''
-        s_initialize('bgp_open')
+        """
+        s_initialize('bgp_open7')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -185,15 +191,15 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             s_static(name='length', value=b'\x00\x13')                            
             s_static(name='type', value=b'\x04')  
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.connect(s_get('bgp_open'), s_get('BGP_KEEPALIVE'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open7'))
+        self.session.connect(s_get('bgp_open7'), s_get('BGP_KEEPALIVE'))
+        self.fuzz()
 
     def fuzz_open_identifier(self):
-        '''
+        """
         Fuzz BGP Identifier field with random values and invalid IPs.
-        '''
-        s_initialize('bgp_open')
+        """
+        s_initialize('bgp_open8')
         with s_block('BGP'):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
@@ -206,14 +212,14 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
-        self.session.connect(s_get('bgp_open'))
-        self.session.fuzz()
+        self.session.connect(s_get('bgp_open8'))
+        self.fuzz()
 
     def fuzz_open_version_length(self):
         """
         Fuzzes the BGP version field and the packet length field with mismatched values.
         """
-        s_initialize('bgp_open')
+        s_initialize('bgp_open9')
         with s_block('BGP'):
             with s_block('Header'):
                 s_bytes(value=b'\xFF'*16, padding=b'\xFF', size=16, name='Marker', fuzzable=False)
@@ -248,6 +254,6 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
 
-        self.session.connect(s_get('bgp_open'))
+        self.session.connect(s_get('bgp_open9'))
         self.session.connect(s_get('bgp_open_with_length_mismatch'))
-        self.session.fuzz()
+        self.fuzz()
