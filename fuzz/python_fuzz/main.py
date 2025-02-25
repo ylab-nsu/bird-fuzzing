@@ -28,13 +28,7 @@ bgp_test10.fuzz_notification()
 
 bgp_test11 = BgpUpdateFuzzer('config.json')
 bgp_test11.update_test_with_withdrawn_routes()
-bgp_test12 = BgpUpdateFuzzer('config.json')
-bgp_test12.update_test_fuzz_withdrawn_routes_length()
-bgp_test13 = BgpUpdateFuzzer('config.json')
-bgp_test13.update_test_fuzz_withdrawn_routes()
-bgp_test14 = BgpUpdateFuzzer('config.json')
-bgp_test14.update_test_fuzz_path_attributes_length()
-bgp_test15 = BgpUpdateFuzzer('config.json')
-bgp_test15.update_test_fuzz_path_attributes() # посмотреть что там
-bgp_test16 = BgpUpdateFuzzer('config.json')
-bgp_test16.update_test_fuzz_nlri()
+bgp_test11.update_test_fuzz_withdrawn_routes_length()
+bgp_test11.update_test_fuzz_path_attributes_length()
+#bgp_test11.update_test_fuzz_path_attributes() # посмотреть что там
+bgp_test11.update_test_fuzz_nlri()
