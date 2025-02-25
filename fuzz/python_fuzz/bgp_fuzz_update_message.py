@@ -17,6 +17,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
     def __init__(self, config_file):
         super().__init__(config_file)
         self.cur = 0
+        self.cur2 = 0
 
     def fuzz(self, name):
         # Добавляем замер времени и статуса
@@ -54,14 +55,15 @@ class BgpUpdateFuzzer(BGFuzzTest):
                     s_static(value=b'', name='Params')
         return s_get('bgp_open' + str(self.cur - 1))
 
-    @staticmethod
-    def create_bgp_keepalive():
-        s_initialize('BGP_KEEPALIVE')
+
+    def create_bgp_keepalive(self):
+        s_initialize('BGP_KEEPALIVE' + str(self.cur2))
+        self.cur2 += 1
         with s_block('HEADER'):
             s_static(name='marker', value=b'\xff' * 16)
             s_static(name='length', value=b'\x00\x13')
             s_static(name='type', value=b'\x04')
-        return s_get('BGP_KEEPALIVE')
+        return s_get('BGP_KEEPALIVE' + str(self.cur2 - 1))
 
     def update_test_with_withdrawn_routes(self):
         """
@@ -93,7 +95,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open0'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_with_withdrawn'))
+        self.session.connect(s_get('BGP_KEEPALIVE0'), s_get('BGP_UPDATE_with_withdrawn'))
         self.fuzz('BGP_UPDATE_with_withdrawn')
 
     def update_test_with_incorrect_path_attrs(self):
@@ -119,7 +121,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         # Последовательность отправки сообщений
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open1'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_with_incorrect_attrs'))
+        self.session.connect(s_get('BGP_KEEPALIVE1'), s_get('BGP_UPDATE_with_incorrect_attrs'))
         self.fuzz('BGP_UPDATE_with_incorrect_attrs')
 
     def update_test_with_valid_withdrawn_routes(self):
@@ -157,7 +159,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open2'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_valid_withdrawn'))
+        self.session.connect(s_get('BGP_KEEPALIVE2'), s_get('BGP_UPDATE_valid_withdrawn'))
         self.fuzz('BGP_UPDATE_valid_withdrawn')
 
     def update_test_fuzz_withdrawn_routes_length(self):
@@ -181,8 +183,8 @@ class BgpUpdateFuzzer(BGFuzzTest):
                     s_random(num_mutations=1024, min_length=0, max_length=1024, fuzzable=True)
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
-        self.session.connect(s_get('bgp_open3'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_withdrawn_len'))
+        self.session.connect(s_get('bgp_open1'), self.create_bgp_keepalive())
+        self.session.connect(s_get('BGP_KEEPALIVE1'), s_get('BGP_UPDATE_fuzz_withdrawn_len'))
         self.fuzz('BGP_UPDATE_fuzz_withdrawn_len')
 
     def update_test_fuzz_withdrawn_routes(self):
@@ -207,7 +209,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open4'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_withdrawn_routes'))
+        self.session.connect(s_get('BGP_KEEPALIVE4'), s_get('BGP_UPDATE_fuzz_withdrawn_routes'))
         self.fuzz('BGP_UPDATE_fuzz_withdrawn_routes')
 
     def update_test_fuzz_path_attributes_length(self):
@@ -228,8 +230,8 @@ class BgpUpdateFuzzer(BGFuzzTest):
                     s_random(num_mutations=1024, min_length=0, max_length=1024, fuzzable=True)
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
-        self.session.connect(s_get('bgp_open5'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_path_attr_len'))
+        self.session.connect(s_get('bgp_open2'), self.create_bgp_keepalive())
+        self.session.connect(s_get('BGP_KEEPALIVE2'), s_get('BGP_UPDATE_fuzz_path_attr_len'))
         self.fuzz('BGP_UPDATE_fuzz_path_attr_len')
 
     def update_test_fuzz_path_attributes(self):
@@ -257,7 +259,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open6'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_path_attrs'))
+        self.session.connect(s_get('BGP_KEEPALIVE6'), s_get('BGP_UPDATE_fuzz_path_attrs'))
         self.fuzz('BGP_UPDATE_fuzz_path_attrs')
 
     def update_test_fuzz_nlri(self):
@@ -279,6 +281,6 @@ class BgpUpdateFuzzer(BGFuzzTest):
                 s_bytes(name='nlri_prefix_addr', value=b'\xc0\xa8\x02', size=3, fuzzable=True)  # Фаззим адрес префикса
         # Устанавливаем последовательность сообщений
         self.session.connect(self.create_bgp_open())
-        self.session.connect(s_get('bgp_open7'), self.create_bgp_keepalive())
-        self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_nlri'))
+        self.session.connect(s_get('bgp_open3'), self.create_bgp_keepalive())
+        self.session.connect(s_get('BGP_KEEPALIVE3'), s_get('BGP_UPDATE_fuzz_nlri'))
         self.fuzz('BGP_UPDATE_fuzz_nlri')
