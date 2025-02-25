@@ -18,7 +18,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         super().__init__(config_file)
         self.cur = 0
 
-    def fuzz(self):
+    def fuzz(self, name):
         # Добавляем замер времени и статуса
         start_time = time.time()  # Запоминаем время начала
         try:
@@ -28,7 +28,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
             status = f"Failed: {e}"
         finally:
             elapsed_time = time.time() - start_time  # Вычисляем затраченное время
-            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
+            print(f"Test {name} {self.max_tests} {status} {elapsed_time:.2f} seconds")
 
     @staticmethod
     def initialize_bgp_header(block_name):
@@ -94,7 +94,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open0'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_with_withdrawn'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_with_withdrawn')
 
     def update_test_with_incorrect_path_attrs(self):
         """
@@ -120,7 +120,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open1'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_with_incorrect_attrs'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_with_incorrect_attrs')
 
     def update_test_with_valid_withdrawn_routes(self):
         """
@@ -158,7 +158,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open2'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_valid_withdrawn'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_valid_withdrawn')
 
     def update_test_fuzz_withdrawn_routes_length(self):
         """
@@ -183,7 +183,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open3'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_withdrawn_len'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_fuzz_withdrawn_len')
 
     def update_test_fuzz_withdrawn_routes(self):
         """
@@ -208,7 +208,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open4'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_withdrawn_routes'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_fuzz_withdrawn_routes')
 
     def update_test_fuzz_path_attributes_length(self):
         """
@@ -230,7 +230,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open5'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_path_attr_len'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_fuzz_path_attr_len')
 
     def update_test_fuzz_path_attributes(self):
         """
@@ -258,7 +258,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open6'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_path_attrs'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_fuzz_path_attrs')
 
     def update_test_fuzz_nlri(self):
         """
@@ -281,4 +281,4 @@ class BgpUpdateFuzzer(BGFuzzTest):
         self.session.connect(self.create_bgp_open())
         self.session.connect(s_get('bgp_open7'), self.create_bgp_keepalive())
         self.session.connect(s_get('BGP_KEEPALIVE'), s_get('BGP_UPDATE_fuzz_nlri'))
-        self.fuzz()
+        self.fuzz('BGP_UPDATE_fuzz_nlri')

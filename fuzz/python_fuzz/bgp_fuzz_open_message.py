@@ -15,7 +15,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
     def __init__(self, config_file):
         super().__init__(config_file)
 
-    def fuzz(self):
+    def fuzz(self, name):
         # Добавляем замер времени и статуса
         start_time = time.time()  # Запоминаем время начала
         try:
@@ -25,7 +25,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             status = f"Failed: {e}"
         finally:
             elapsed_time = time.time() - start_time  # Вычисляем затраченное время
-            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
+            print(f"Test {name} {self.max_tests} {status} {elapsed_time:.2f} seconds")
 
     @staticmethod
     def initialize_bgp_header(block_name):
@@ -66,7 +66,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
 
         self.session.connect(s_get('bgp_open1'))
         self.session.connect(s_get('bgp_open1'), s_get('bgp_keepalive'))
-        self.fuzz()
+        self.fuzz('bgp_open_with_optional_params')
 
     def fuzz_bgp_open_optional_param_length(self):
         """
@@ -85,7 +85,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=4096, fuzzable=True)
 
         self.session.connect(s_get('bgp_open2'))
-        self.fuzz()
+        self.fuzz('bgp_open_optional_param_length')
 
     def fuzz_bgp_open_random_params(self):
         """
@@ -103,7 +103,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=4096, fuzzable=True)
 
         self.session.connect(s_get('bgp_open3'))
-        self.fuzz()
+        self.fuzz('bgp_open_random_params')
 
     def fuzz_bgp_open_version_field(self):
         """
@@ -123,7 +123,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_static(value=b'', name='Params')
 
         self.session.connect(s_get('bgp_open4'))
-        self.fuzz()
+        self.fuzz('bgp_open_version_field')
 
     def fuzz_bgp_open_length_mismatch(self):
         """
@@ -145,7 +145,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_static(value=b'', name='Params')
 
         self.session.connect(s_get('bgp_open5'))
-        self.fuzz()
+        self.fuzz('bgp_open_length_mismatch')
 
     def fuzz_open_asn(self):
         """
@@ -165,7 +165,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_static(value=b'', name='Params')
 
         self.session.connect(s_get('bgp_open6'))
-        self.fuzz()
+        self.fuzz('fuzz_open_asn')
 
 
     def fuzz_open_hold_time(self):
@@ -193,7 +193,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
 
         self.session.connect(s_get('bgp_open7'))
         self.session.connect(s_get('bgp_open7'), s_get('BGP_KEEPALIVE'))
-        self.fuzz()
+        self.fuzz('fuzz_open_hold_time')
 
     def fuzz_open_identifier(self):
         """
@@ -213,7 +213,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                     s_static(value=b'', name='Params')
 
         self.session.connect(s_get('bgp_open8'))
-        self.fuzz()
+        self.fuzz('fuzz_open_identifier')
 
     def fuzz_open_version_length(self):
         """
@@ -256,4 +256,4 @@ class BGPFuzzOpenMessage(BGFuzzTest):
 
         self.session.connect(s_get('bgp_open9'))
         self.session.connect(s_get('bgp_open_with_length_mismatch'))
-        self.fuzz()
+        self.fuzz('bgp_open_with_length_mismatch')

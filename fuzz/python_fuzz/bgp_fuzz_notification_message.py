@@ -36,4 +36,4 @@ class BGPFuzzNotificationMessage(BGFuzzTest):
             status = f"Failed: {e}"
         finally:
             elapsed_time = time.time() - start_time  # Вычисляем затраченное время
-            print(f"Test {self.max_tests} {status} {elapsed_time:.2f} seconds")
+            print(f"Test Notification {self.max_tests} {status} {elapsed_time:.2f} seconds")
