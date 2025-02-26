@@ -23,8 +23,6 @@ jobs:
 
       - name: Run fuzz tests with colored output
         run: |
-          mkdir bird-fuzzing
-          touch ./bird-fuzzing/output.txt
           docker run --rm bird-fuzzing | tee ./bird-fuzzing/output.txt  
 
       - name: Upload test output as artifact
