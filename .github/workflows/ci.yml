@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - binary-based
+      - CI-branch
 
 jobs:
   build:
