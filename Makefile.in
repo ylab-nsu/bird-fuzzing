@@ -186,7 +186,8 @@ $(fuzz_targets): %: %.o $(fuzz_objs) $(tests_objs) | prepare
 	$(E)echo LD $(LDFLAGS) -o $@ $< "..." $(LIBS)
 	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(fuzz_targets): LDFLAGS += -fsanitize=fuzzer
+$(fuzz_targets): LDFLAGS += -fsanitize=address,fuzzer
+$(fuzz_targets): CFLAGS += -fsanitize=address,fuzzer
 $(fuzz_targets): LIBS += $(DAEMON_LIBS)
 
 test: testsclean check
