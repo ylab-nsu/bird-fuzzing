@@ -23,7 +23,7 @@ jobs:
 
       - name: Run fuzz tests with colored output
         run: |
-          docker run     
+          docker run bird-fuzzing    
           docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt 
 
 
