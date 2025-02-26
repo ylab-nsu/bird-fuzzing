@@ -176,14 +176,14 @@ int bt_assert_batch__(struct bt_batch *opts);
 int bt_is_char(byte c);
 
 #define bt_assert_batch(data__, fn__, in_fmt__, out_fmt__)		\
-  bt_assert_batch__(& (struct bt_batch) {				\
-    .data = data__,							\
-    .ndata = ARRAY_SIZE(data__),					\
-    .test_fn = fn__,							\
-    .test_fn_name = #fn__,						\
-    .in_fmt = in_fmt__,							\
-    .out_fmt = out_fmt__,						\
-    .out_buf = bt_out_fmt_buf,	/* Global memory for this usage */	\
+  bt_assert_batch__(& (struct bt_batch) {				               \
+    .data = data__,							                                \
+    .ndata = ARRAY_SIZE(data__),  		                           \
+    .test_fn = fn__,							                                \
+    .test_fn_name = #fn__,						                             \
+    .in_fmt = in_fmt__,						  	                              \
+    .out_fmt = out_fmt__,						                                 \
+    .out_buf = bt_out_fmt_buf,	/* Global memory for this usage */	  \
   })
 
 #endif /* _BIRDTEST_H_ */

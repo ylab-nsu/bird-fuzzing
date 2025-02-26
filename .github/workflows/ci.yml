@@ -1,0 +1,33 @@
+name: Bird Fuzzing CI With Docker
+
+on:
+  push:
+    branches:
+      - binary-based
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2  
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2  
+
+      - name: Build Docker image from Dockerfile
+        run: |
+          docker build -f Dockerfile -t bird-fuzzing . 
+
+      - name: Run fuzz tests with colored output
+        run: |
+          mkdir bird-fuzzing
+          touch ./bird-fuzzing/output.txt
+          docker run --rm bird-fuzzing | tee ./bird-fuzzing/output.txt  
+
+      - name: Upload test output as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-output
+          path: /bird-fuzzing/output.txt 
