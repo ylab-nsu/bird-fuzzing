@@ -6,8 +6,9 @@ from boofuzz import *
 from bgp_fuzz_test import BGFuzzTest
 
 class BGPFuzzNotificationMessage(BGFuzzTest):
-    def __init__(self, config_file):
+    def __init__(self, config_file, test_results):
         super().__init__(config_file)
+        self.test_results = test_results
 
     def fuzz_notification(self):
         """
@@ -36,4 +37,5 @@ class BGPFuzzNotificationMessage(BGFuzzTest):
             status = f"Failed: {e}"
         finally:
             elapsed_time = time.time() - start_time  # Вычисляем затраченное время
+            self.test_results.add_result("Test Notification", status,  self.max_tests, str(elapsed_time))
             print(f"Test Notification {self.max_tests} {status} {elapsed_time:.2f} seconds")

@@ -5,7 +5,6 @@ services:
     build:
       context: ./bird_configs
     container_name: bird-container-test
-    # platform: linux/amd64
     networks:
       bird_network:
         ipv4_address: 192.168.100.10
@@ -26,6 +25,8 @@ services:
         ipv4_address: 192.168.100.20
     stdin_open: true
     tty: true
+    volumes:
+      - ./output:/app/output  # Локальная папка output будет соответствовать /app/output в контейнере
 
 networks:
   bird_network:
