@@ -24,8 +24,8 @@ jobs:
       - name: Run fuzz tests with colored output
         run: |
           docker run bird-fuzzing    
-          docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt 
-
+          docker cp $(docker ps -a -q | head -n 1):/bird-fuzzing/output.txt bird-fuzzing/output.txt
+          docker rm $(docker ps -a -q | head -n 1)
 
       - name: Upload folder as artifact
         uses: actions/upload-artifact@v4

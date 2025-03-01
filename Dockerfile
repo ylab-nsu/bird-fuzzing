@@ -28,5 +28,5 @@ RUN chmod +x ./obj/nest/fuzz/rt-fib_fuzz_mostly_negative_matches
 RUN ls -al ./obj/nest/fuzz/
 
 
-CMD ["sh", "-c", "./obj/nest/fuzz/rt-fib_fuzz_mostly_negative_matches -max_len=8192 -use_counters=1 -use_memmem=1 -runs=1000 2> bird-fuzzing/output.txt"]
+CMD ["sh", "-c", "./obj/nest/fuzz/rt-fib_fuzz_mostly_negative_matches -max_len=8192 -use_counters=1 -use_memmem=1 -runs=1000 2> /bird-fuzzing/bird-fuzzing/output.txt"]
 
