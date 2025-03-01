@@ -1,4 +1,6 @@
 import socket
+import time
+
 from boofuzz import Session, Target, TCPSocketConnection
 import json
 import paramiko
@@ -7,6 +9,7 @@ from custom_logger import CustomFuzzLogger
 
 class BGFuzzTest:
     def __init__(self, config_file):
+        self.test_results = None
         with open(config_file, 'r') as f:
             config = json.load(f)
         
@@ -37,6 +40,19 @@ class BGFuzzTest:
             post_test_case_callbacks=[self.print_new_logs, self.restart_uplink],
             fuzz_loggers=[self.logger]  # Используем кастомный логгер
         )
+
+    def fuzz(self, name):
+        # Добавляем замер времени и статуса
+        start_time = time.time()  # Запоминаем время начала
+        try:
+            self.session.fuzz()
+            status = "Success"
+        except Exception as e:
+            status = f"Failed: {e}"
+        finally:
+            elapsed_time = time.time() - start_time  # Вычисляем затраченное время
+            self.test_results.add_result(name, status,  self.max_tests, str(elapsed_time))
+            print(f"Test {name} {self.max_tests} {status} {elapsed_time:.2f} seconds")
 
     @staticmethod
     def ip_str_to_bytes(ip):
