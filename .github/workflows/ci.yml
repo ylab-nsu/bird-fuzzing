@@ -22,8 +22,7 @@ jobs:
 
     - name: Run tests in Docker container in detached mode
       run: |
-        docker run -d --name bird-fuzzing-container bird-fuzzing:latest
-        docker wait bird-fuzzing-container  # Ждем завершения контейнера
+        docker run --name bird-fuzzing-container bird-fuzzing:latest
 
     - name: Check if the file exists in the container
       run: |
