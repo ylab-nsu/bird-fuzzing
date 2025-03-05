@@ -1,37 +1,41 @@
-name: Bird Fuzzing CI With Docker
+name: Docker Fuzzing Tests
 
 on:
   push:
     branches:
-      - CI-branch  
+      - CI-branch
 
 jobs:
   build_and_test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-    - name: Set up Docker Buildx
+    - name: Set up Docker
       uses: docker/setup-buildx-action@v2
 
     - name: Build Docker image
       run: |
         docker build -t bird-fuzzing .
 
-    - name: Run tests in Docker container
+    - name: Run tests in Docker container in detached mode
       run: |
-        docker run --name bird-fuzzing-container bird-fuzzing:latest
-        
+        docker run -d --name bird-fuzzing-container bird-fuzzing:latest
+        docker wait bird-fuzzing-container  # Ждем завершения контейнера
+
+    - name: Check if the file exists in the container
+      run: |
+        docker exec bird-fuzzing-container ls -l /bird-fuzzing/output.txt
+
     - name: Copy output file to GitHub Actions workspace
       run: |
-        docker wait bird-fuzzing-container
         docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt
-        mv ./output.txt $GITHUB_WORKSPACE/output.txt  
+        mv ./output.txt $GITHUB_WORKSPACE/output.txt  # Сохраняем файл в директории рабочего пространства
 
     - name: Upload test results as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v3
       with:
         name: fuzzing-results
         path: ./output.txt
