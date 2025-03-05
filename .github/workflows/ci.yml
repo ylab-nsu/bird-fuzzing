@@ -3,33 +3,38 @@ name: Bird Fuzzing CI With Docker
 on:
   push:
     branches:
-      - binary-based
-      - CI-branch
+      - CI-branch  
 
 jobs:
-  build:
-    runs-on: ubuntu-latest  
+  build_and_test:
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4  
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2  
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
 
-      - name: Build Docker image from Dockerfile
-        run: |
-          docker build -f Dockerfile -t bird-fuzzing . 
+    - name: Build Docker image
+      run: |
+        docker build -t bird-fuzzing .
 
-      - name: Run fuzz tests with colored output
-        run: |
-          docker run bird-fuzzing    
-          docker cp $(docker ps -a -q | head -n 1):/bird-fuzzing/output.txt bird-fuzzing/output.txt
-          docker rm $(docker ps -a -q | head -n 1)
+    - name: Run tests in Docker container
+      run: |
+        docker run --name bird-fuzzing-container bird-fuzzing:latest
 
-      - name: Upload folder as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: fuzzing-results
-          path: bird-fuzzing/
+    - name: Copy output file to GitHub Actions workspace
+      run: |
+        docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt
+        mv ./output.txt $GITHUB_WORKSPACE/output.txt  
 
+    - name: Upload test results as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: fuzzing-results
+        path: ./output.txt
+
+    - name: Clean up Docker container
+      run: |
+        docker rm bird-fuzzing-container
