@@ -23,9 +23,10 @@ jobs:
     - name: Run tests in Docker container
       run: |
         docker run --name bird-fuzzing-container bird-fuzzing:latest
-
+        
     - name: Copy output file to GitHub Actions workspace
       run: |
+        docker wait bird-fuzzing-container
         docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt
         mv ./output.txt $GITHUB_WORKSPACE/output.txt  
 
