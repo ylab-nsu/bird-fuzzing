@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Set up Docker
       uses: docker/setup-buildx-action@v2
@@ -35,7 +35,7 @@ jobs:
         mv ./output.txt $GITHUB_WORKSPACE/output.txt  # Сохраняем файл в директории рабочего пространства
 
     - name: Upload test results as artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: fuzzing-results
         path: ./output.txt
