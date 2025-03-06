@@ -24,14 +24,9 @@ jobs:
       run: |
         docker run --name bird-fuzzing-container bird-fuzzing:latest
 
-    - name: Check if the file exists in the container
-      run: |
-        docker exec bird-fuzzing-container ls -l /bird-fuzzing/output.txt
-
     - name: Copy output file to GitHub Actions workspace
       run: |
-        docker cp bird-fuzzing-container:/bird-fuzzing/output.txt ./output.txt
-        mv ./output.txt $GITHUB_WORKSPACE/output.txt  # Сохраняем файл в директории рабочего пространства
+        docker cp bird-fuzzing-container:/bird-fuzzing/output.txt $GITHUB_WORKSPACE/output.txt
 
     - name: Upload test results as artifact
       uses: actions/upload-artifact@v4
