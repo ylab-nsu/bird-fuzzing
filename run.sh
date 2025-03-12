@@ -14,8 +14,11 @@ for file in "$input_folder"/*; do
     filename=$(basename "$file")
     output_file="${filename%.*}.txt"
     
-    "$file" -runs=1000 2> "$output_folder/$output_file"
-    
+    if [-z "$RUNS_NUM"]; then
+      "$file" -runs=1000 2> "$output_folder/$output_file"
+    else
+      "file" -runs=$RUNS_NUM 2> "$output_folder/$output_file"
+    fi
     echo "Запущен: $file, вывод сохранен в $output_folder/$output_file"
   fi
 done

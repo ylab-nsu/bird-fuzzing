@@ -22,7 +22,7 @@ jobs:
 
     - name: Run tests in Docker container in detached mode
       run: |
-        docker run --name bird-fuzzing-container bird-fuzzing:latest
+        docker run --name bird-fuzzing-container -e RUNS_NUM=10000 bird-fuzzing:latest
 
     - name: Copy output file to GitHub Actions workspace
       run: |
