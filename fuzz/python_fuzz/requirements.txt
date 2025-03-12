@@ -1,3 +1,4 @@
 boofuzz
 scapy
 paramiko==3.0.0
+pytest

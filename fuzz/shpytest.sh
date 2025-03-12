@@ -17,5 +17,5 @@ docker exec bird-container-test /usr/sbin/sshd -D &
 echo "Ждём, пока SSH поднимется..."
 sleep 3
 
-echo "Запускаем Python-приложение в fuzzer-container..."
-docker exec fuzzer-container python3 main.py
+echo "Запускаем тесты с pytest..."
+docker exec -it fuzzer-container pytest tests/ -v | tee output/pytest_output.txt
