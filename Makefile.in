@@ -186,8 +186,9 @@ $(fuzz_targets): %: %.o $(fuzz_objs) $(tests_objs) | prepare
 	$(E)echo LD $(LDFLAGS) -o $@ $< "..." $(LIBS)
 	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(fuzz_targets): LDFLAGS += -fsanitize=fuzzer
+$(fuzz_targets): LDFLAGS +=  -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer -g -O1 -fprofile-instr-generate -fcoverage-mapping 
 $(fuzz_targets): LIBS += $(DAEMON_LIBS)
+$(fuzz_targets): CFLAGS = -fsanitize=fuzzer,undefined -fno-omit-frame-pointer -g -O1 -fprofile-instr-generate -fcoverage-mapping -I . -I ./obj
 
 test: testsclean check
 check: tests tests_run
