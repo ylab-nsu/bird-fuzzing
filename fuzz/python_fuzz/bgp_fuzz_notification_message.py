@@ -20,7 +20,7 @@ class BGPFuzzNotificationMessage(BGFuzzTest):
             with s_block("Notification"):
                 s_byte(name='error_code', value=0x00, fuzzable=False)
                 s_byte(name='error_sub-code', value=0x00, fuzzable=False)
-                s_random(name='data', min_length=0, max_length=4096, num_mutations=4096, fuzzable=True)
+                s_random(name='data', min_length=0, num_mutations=100000, fuzzable=True)
 
         self.session.connect(s_get("BGP_NOTIFICATION"))
         self.fuzz("notification")

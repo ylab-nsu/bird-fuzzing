@@ -59,8 +59,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
                    fuzzable=False)
             s_static(name='type', value=b'\x02')
             with s_block('UPDATE'):
-                s_size(name='withdrawn_routes_length', length=2, block_name='withdrawn_routes', endian=BIG_ENDIAN,
-                       fuzzable=True)  # Fuzzing this field
+                s_random(value='', min_length=2, max_length=2, num_mutations=100000, name='withdrawn_routes_length', fuzzable=True)
                 with s_block('withdrawn_routes'):
                     s_static(name='prefix1_len', value=b'\x20')  # 32-bit length
                     s_static(name='prefix1_addr', value=b'\xc0\xa8\x01\x01')  # 192.168.1.1
@@ -110,8 +109,7 @@ class BgpUpdateFuzzer(BGFuzzTest):
             s_static(name='type', value=b'\x02')
             with s_block('UPDATE'):
                 s_static(name='withdrawn_routes_length', value=b'\x00\x00')  # Static field
-                s_size(name='total_path_attr_len', length=2, block_name='FUZZ LOAD', endian=BIG_ENDIAN,
-                       fuzzable=True)  # Fuzzing this field
+                s_random(value='', min_length=2, max_length=2, num_mutations=100000, name='total_path_attr_len', fuzzable=True)
                 with s_block('FUZZ LOAD'):
                     s_static(value=b'', name='Params')  # Empty field for attributes
         # Set the message sequence

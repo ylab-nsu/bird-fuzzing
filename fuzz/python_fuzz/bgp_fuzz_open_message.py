@@ -88,7 +88,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 with s_block('Optional Parameters'):
-                    s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=4096, fuzzable=True)
+                    s_random(name='params', max_length=MAX_BGP_OPTIONAL_PARAM_LEN, num_mutations=100000, fuzzable=True)
 
         self.session.connect(s_get('bgp_open3'))
         self.fuzz('bgp_open_random_params')
@@ -102,7 +102,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             self.initialize_bgp_header('Header')
             with s_block('Open'):
                 # Fuzz the version field
-                s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=True)
+                s_random(value='', min_length=1, max_length=1, num_mutations=100000, name='Version', fuzzable=True)
                 s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
@@ -123,7 +123,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
             with s_block('Open'):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=False)
                 # Fuzz ASN field
-                s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=True)
+                s_random(value='', min_length=2, max_length=2, num_mutations=100000, name='ASN', fuzzable=True)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
@@ -144,7 +144,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 s_byte(value=BGP_VERSION, endian=BIG_ENDIAN, name='Version', fuzzable=False)
                 s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 # Fuzz Hold Time field
-                s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=True)
+                s_random(value='', min_length=2, max_length=2, num_mutations=100000, name='Hold Time', fuzzable=True)
                 s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=False)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
                 with s_block('Optional Parameters'):
@@ -172,7 +172,7 @@ class BGPFuzzOpenMessage(BGFuzzTest):
                 s_word(value=self.FUZZER_ASN_ID, endian=BIG_ENDIAN, name='ASN', fuzzable=False)
                 s_word(value=self.PARAM_HOLD_TIME, endian=BIG_ENDIAN, name='Hold Time', fuzzable=False)
                 # Fuzz BGP Identifier field with invalid values
-                s_dword(value=self.ip_str_to_bytes(self.HOST_BGP_ID), endian=BIG_ENDIAN, name='BGP Identifier', fuzzable=True)
+                s_random(value='', min_length=4, max_length=4, num_mutations=100000, name='BGP Identifier', fuzzable=True)
                 s_byte(value=0x00, endian=BIG_ENDIAN, name='Opt Parm Len', fuzzable=False)
                 with s_block('Optional Parameters'):
                     s_static(value=b'', name='Params')
@@ -180,4 +180,20 @@ class BGPFuzzOpenMessage(BGFuzzTest):
         self.session.connect(s_get('bgp_open8'))
         self.fuzz('fuzz_open_identifier')
 
+    def fuzz_bgp_header_without_marker(self):
+        """
+        Fuzz all fields of the BGP header except for the marker.
+        Fuzzed fields:
+        - Length: a 2-byte field (with a range depending on the expected message length).
+        - Type: a 1-byte field.
+        The marker remains fixed (16 bytes with the value 0xFF).
+        """
 
+        s_initialize("bgp_header_no_marker")
+        with s_block("BGP Header"):
+            s_bytes(name="Marker", value=b"\xff" * BGP_HEADER_SIZE, size=BGP_HEADER_SIZE, fuzzable=False)
+            s_random(name="Length", min_length=2, max_length=2, num_mutations=100000, fuzzable=True)
+            s_random(name="Type", min_length=1, max_length=1, num_mutations=100000, fuzzable=True)
+
+        self.session.connect(s_get("bgp_header_no_marker"))
+        self.fuzz("fuzz_bgp_header_without_marker")
