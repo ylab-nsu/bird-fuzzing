@@ -23,6 +23,8 @@ bgp_test6 = BGPFuzzOpenMessage('config.json', test_results)
 bgp_test6.fuzz_open_hold_time()
 bgp_test7 = BGPFuzzOpenMessage('config.json', test_results)
 bgp_test7.fuzz_open_identifier()
+bgp_test10 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test10.fuzz_bgp_header_without_marker()
 
 bgp_test8 = BGPFuzzNotificationMessage('config.json', test_results)
 bgp_test8.fuzz_notification()
