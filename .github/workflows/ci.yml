@@ -3,7 +3,7 @@ name: Docker Fuzzing Tests
 on:
   push:
     branches:
-      - CI-branch
+      - source-based-CI
 
 jobs:
   build_and_test:
