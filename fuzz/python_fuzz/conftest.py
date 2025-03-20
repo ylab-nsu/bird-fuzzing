@@ -3,6 +3,13 @@ import shutil
 import pytest
 from test_results import TestResults
 
+def pytest_addoption(parser):
+    parser.addoption("--max-tests", action="store", default=10000, help="Number of max tests to run")
+
+@pytest.fixture
+def max_tests(request):
+    return int(request.config.getoption("--max-tests"))
+
 @pytest.fixture(scope="session")
 def test_results():
     """Создаем один объект TestResults на всю сессию и сохраняем в session.config"""

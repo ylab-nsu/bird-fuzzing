@@ -14,13 +14,13 @@ from bgp_fuzz_update_message import BgpUpdateFuzzer
     "fuzz_open_hold_time",
     "fuzz_open_identifier"
 ])
-def test_fuzz_open_messages(fuzz_method, test_results):
-    bgp_test = BGPFuzzOpenMessage('config.json', test_results)
+def test_fuzz_open_messages(fuzz_method, max_tests, test_results):
+    bgp_test = BGPFuzzOpenMessage('config.json', test_results, max_tests=max_tests)
     getattr(bgp_test, fuzz_method)()
 
 @pytest.mark.notification
-def test_fuzz_notification(test_results):
-    bgp_test = BGPFuzzNotificationMessage('config.json', test_results)
+def test_fuzz_notification(max_tests, test_results):
+    bgp_test = BGPFuzzNotificationMessage('config.json', test_results, max_tests=max_tests)
     bgp_test.fuzz_notification()
 
 @pytest.mark.update
@@ -31,6 +31,6 @@ def test_fuzz_notification(test_results):
     "update_test_fuzz_path_attributes",
     "update_test_fuzz_nlri"
 ])
-def test_fuzz_update_messages(fuzz_method, test_results):
-    bgp_test = BgpUpdateFuzzer('config.json', test_results)
+def test_fuzz_update_messages(fuzz_method, max_tests, test_results):
+    bgp_test = BgpUpdateFuzzer('config.json', test_results, max_tests=max_tests)
     getattr(bgp_test, fuzz_method)()

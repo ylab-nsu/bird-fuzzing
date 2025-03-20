@@ -2,8 +2,8 @@ from boofuzz import *
 from bgp_fuzz_test import BGFuzzTest
 
 class BGPFuzzNotificationMessage(BGFuzzTest):
-    def __init__(self, config_file, test_results):
-        super().__init__(config_file)
+    def __init__(self, config_file, test_results, max_tests=100):
+        super().__init__(config_file, max_tests)
         self.test_results = test_results
 
     def fuzz_notification(self):

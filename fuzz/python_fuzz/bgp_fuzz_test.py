@@ -8,7 +8,7 @@ from custom_logger import CustomFuzzLogger
 
 
 class BGFuzzTest:
-    def __init__(self, config_file):
+    def __init__(self, config_file, max_tests=100):
         self.test_results = None
         with open(config_file, 'r') as f:
             config = json.load(f)
@@ -25,7 +25,7 @@ class BGFuzzTest:
         self.BIRD_IP = config['BIRD_BGP_ID']
         self.BIRD_PASSWORD = 'password'
         self.log_file = "logs.txt"
-        self.max_tests = 10000
+        self.max_tests = max_tests
         self.test_counter = 0
 
         self.logger = CustomFuzzLogger(self.log_file)

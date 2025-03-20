@@ -12,8 +12,8 @@ DEFAULT_HOLD_TIME = 90
 
 
 class BgpUpdateFuzzer(BGFuzzTest):
-    def __init__(self, config_file, test_results):
-        super().__init__(config_file)
+    def __init__(self, config_file, test_results, max_tests=100):
+        super().__init__(config_file, max_tests)
         self.test_results = test_results
 
     @staticmethod
