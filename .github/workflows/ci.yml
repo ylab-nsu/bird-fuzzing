@@ -18,7 +18,7 @@ jobs:
 
     - name: Start containers with docker-compose
       run: |
-        docker-compose up --build -d
+        docker compose up --build -d
 
     - name: Wait for bird-container-test to be ready
       run: |
