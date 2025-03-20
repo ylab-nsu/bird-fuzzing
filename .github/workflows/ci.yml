@@ -1,0 +1,48 @@
+name: Docker Fuzzing Tests
+
+on:
+  push:
+    branches:
+      - CI-branch
+
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v2
+
+    - name: Start containers with docker-compose
+      run: |
+        docker-compose up --build -d
+
+    - name: Wait for bird-container-test to be ready
+      run: |
+        echo "Waiting for bird-container-test to be ready..."
+        while ! docker exec bird-container-test ls /usr/sbin/sshd &>/dev/null; do
+          sleep 1
+        done
+        echo "bird-container-test is ready."
+
+    - name: Start SSH in bird-container-test
+      run: |
+        docker exec bird-container-test /usr/sbin/sshd -D &
+        sleep 3
+
+    - name: Run tests with pytest in fuzzer-container
+      run: |
+        docker exec fuzzer-container pytest tests/ --max-tests=100 -v | tee output/pytest_output.txt
+
+    - name: Upload test results as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: pytest-results
+        path: output/pytest_output.txt
+
+    - name: Cleanup Docker
+      run: |
+        docker-compose down
