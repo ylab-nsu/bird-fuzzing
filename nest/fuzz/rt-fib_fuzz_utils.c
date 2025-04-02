@@ -8,11 +8,8 @@
 
 #include "rt-fib_fuzz_utils.h"
 #include "stdlib.h"
-#define TESTS_NUM		10
 #define PREFIXES_NUM 		  400000
 #define PREFIX_TESTS_NUM 	200000
-#define PREFIX_BENCH_MAX 	1000000
-#define PREFIX_BENCH_NUM 	10000000
 
 struct test_node
 {
@@ -24,11 +21,6 @@ static inline int net_match(struct test_node *tn, net_addr *query, net_addr *dat
 { 
     return (tn->pos < PREFIXES_NUM) && net_equal(query, &data[tn->pos]); 
 }
-
-
-
-
-
 
 int
 t_match_random_net_positive(const uint8_t *Data, size_t Size)
@@ -98,7 +90,7 @@ t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
   for (int i = 0; i < PREFIX_TESTS_NUM; i++)
   {
     net_addr net;
-    bt_random_net(&net, type);
+    bt_random_net(&net, type);// TO DO change this (do determine)
 
     struct test_node *tn = fib_find(f, &net);
     if (tn && !net_match(tn, &net, nets)) {
