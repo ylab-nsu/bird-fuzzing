@@ -3,7 +3,7 @@
 #include "rt-fib_fuzz_utils.h"
 
 int state = 0;
-int type = NET_IP4;
+int type = NET_IP6;
 
 int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   if (state == 0) {
@@ -14,7 +14,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
     state = 1;
   } 
 
-  if ((Size % 5 != 0) || (Size == 0)) {
+  if ((Size % 17 != 0) || (Size == 0)) {
     return -1;
   }
 
