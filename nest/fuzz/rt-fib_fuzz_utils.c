@@ -26,7 +26,18 @@ int
 t_match_random_net_positive(const uint8_t *Data, size_t Size, int type)
 {
   pool *p = rp_new(&root_pool, "FIB pool");
-  int number_of_ips = Size / 5;
+  int number_of_ips;
+  switch (type) {
+    case NET_IP4:
+      number_of_ips = Size / 5;
+      break;
+    case NET_IP6:
+      number_of_ips = Size / 17;
+      break;
+    default:
+      die("Net type %d not implemented", type);
+  }
+
   net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data);
 
   /* init block */
@@ -34,6 +45,8 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size, int type)
   f = malloc(sizeof(struct fib));
   if (f != NULL) {
     fib_init(f, &root_pool, type, sizeof(struct test_node), OFFSETOF(struct test_node, n), 4, NULL);
+  } else {
+    die("Net type %d not implemented", type);
   }
 
   for (int i = 0; i < number_of_ips; i++)
@@ -46,13 +59,14 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size, int type)
   }
     
   /* Test positive matches */
-  for (int j = 0; j < Size / 5; j++)
+  for (int j = 0; j < number_of_ips; j++)
   {
     struct test_node *tn = fib_find(f, &nets[j]);
     if (!tn || !net_match(tn, &nets[j], nets)) {
       __builtin_trap();
     }
-  }
+  } 
+
 
   fib_free(f);
   free(f);
