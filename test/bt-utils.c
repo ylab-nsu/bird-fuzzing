@@ -259,25 +259,42 @@ bt_random_nets(int type, uint n)
 }
 
 net_addr *
-bt_random_nets_from_data(int type, uint n, const uint8_t *Data, size_t Size) {
-  if (Size % 5 != 0) {
-    return NULL;
-  }
-
+bt_random_nets_from_data(int type, uint n, const uint8_t *Data) {
   net_addr *nets = tmp_alloc(n * sizeof(net_addr));
 
-  int index = 0;
-  for (uint i = 0; i < n; i++) {
-    uint pxlen = ((u32)Data[index++] % 24) + 8;
-    u32 ip_data = 0;
-    for (int j = 0; j < 4; j++) {
-      ip_data = (ip_data << 8) | (u32)Data[index++]; // Сдвигаем и добавляем каждый байт
-    }
-    ip4_addr ip4 = ip_data;
-    net_fill_ip4(&nets[i], ip4_and(ip4, ip4_mkmask(pxlen)), pxlen);
+  int data_index = 0;
+  
+  //Начинаем заполнение данными.
+  switch (type) {
+    case NET_IP4:
+      for (uint i = 0; i < n; i++) {
+        //На каждый IP адрес 4 байта + 1 байт для генерации длинны префикса
+        uint pxlen = ((u32)Data[data_index++] % 24) + 8;//Генерируем длинну префикса
+        u32 ip_data = 0;
+        for (int j = 0; j < 4; j++) {
+          ip_data = (ip_data << 8) | (u32)Data[data_index++]; // Сдвигаем и добавляем каждый байт
+        }
+        ip4_addr ip4 = ip_data;
+        net_fill_ip4(&nets[i], ip4_and(ip4, ip4_mkmask(pxlen)), pxlen);
+      }
+      return nets;
+    case NET_IP6:
+    //На каждый IP адрес 16 байта + 1 байт для генерации длинны префикса
+      for (uint i = 0; i < n; i++) {
+        uint pxlen = ((u32)Data[data_index++] % 120) + 8;
+        u32 arguments[4];
+        for (int j = 0; j < 4; j++) {
+          for (int k = 0; k < 4; k++) {
+            arguments[j] = (arguments[j] << 8) | (u32)Data[data_index++];
+          }
+        }
+        ip6_addr ip6 = ip6_build(arguments[0], arguments[1], arguments[2], arguments[3]);
+        net_fill_ip6(&nets[i], ip6_and(ip6, ip6_mkmask(pxlen)), pxlen);
+      }
+      break;
+    default:
+      die("Net type %d not implemented", type);
   }
-
-  return nets;
 }
 
 

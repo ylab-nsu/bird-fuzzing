@@ -23,12 +23,11 @@ static inline int net_match(struct test_node *tn, net_addr *query, net_addr *dat
 }
 
 int
-t_match_random_net_positive(const uint8_t *Data, size_t Size)
+t_match_random_net_positive(const uint8_t *Data, size_t Size, int type)
 {
-  int type = NET_IP4;
   pool *p = rp_new(&root_pool, "FIB pool");
   int number_of_ips = Size / 5;
-  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data);
 
   /* init block */
   struct fib *f;
@@ -68,7 +67,7 @@ t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
   int type = NET_IP4;
   pool *p = rp_new(&root_pool, "FIB pool");
   int number_of_ips = Size / 5;
-  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+  net_addr *nets = bt_random_nets_from_data(type, number_of_ips, Data);
 
   /* init block */
   struct fib *f;
@@ -122,7 +121,7 @@ t_match_random_net_only_negative(const uint8_t *Data, size_t Size)
 
   /*Test (only) negative matches */
   int number_of_ips = Size / 5;
-  net_addr *net = bt_random_nets_from_data(type, number_of_ips, Data, Size);
+  net_addr *net = bt_random_nets_from_data(type, number_of_ips, Data);
   for (int i = 0; i < number_of_ips; i++) {
     struct test_node *tn = fib_find(f, &net[i]);
     if (tn) {
