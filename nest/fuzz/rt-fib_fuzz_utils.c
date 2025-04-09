@@ -67,6 +67,8 @@ t_match_random_net_positive(const uint8_t *Data, size_t Size, int type)
   return 0;
 }
 
+
+//Not good test, but it is not important
 int
 t_match_random_net_mostly_negative(const uint8_t *Data, size_t Size)
 {
