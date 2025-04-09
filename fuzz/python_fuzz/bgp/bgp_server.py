@@ -7,7 +7,7 @@ from scapy.all import IP
 from bgp import *
 
 # loading configuration from file
-with open('config.json') as config_file:
+with open('../config.json') as config_file:
     config = json.load(config_file)
 
 # getting parameters from config
