@@ -12,3 +12,4 @@
 #include "lib/resource.h"
 
 int fuzz_as_path_match(uint8_t *data, size_t size);
+int fuzz_path_format(uint8_t *data, size_t size);

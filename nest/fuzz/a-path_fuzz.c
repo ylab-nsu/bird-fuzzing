@@ -49,3 +49,40 @@ fuzz_as_path_match(uint8_t *data, size_t size) {
 
     return 0;  
 }
+
+#define MAX_BUF_SIZE 256
+
+int
+fuzz_path_format( uint8_t *data, size_t size)
+{
+  if (size < 4 || size > 252) {
+    return -1;
+  }
+
+  struct adata empty_as_path = {};
+  struct adata *as_path = &empty_as_path; 
+
+  for (size_t i = 0; i + 4 < size; i += 4) {
+    u32 asn;
+    memcpy(&asn, data + i, sizeof(u32));
+
+    as_path = as_path_prepend(tmp_linpool, as_path, asn);
+  }
+  byte buf[MAX_BUF_SIZE] = {};
+  as_path_format(&empty_as_path, buf, MAX_BUF_SIZE);
+  
+  //empty buffer case
+  if (strcmp(buf, "") != 0) {
+    __builtin_trap();  
+  }
+  
+  as_path_format(as_path, buf, MAX_BUF_SIZE);
+  //if path is exists then check that path is not empty
+  if (as_path != &empty_as_path && strlen(buf) == 0) {
+    __builtin_trap(); // unexpected empty buffer
+  }
+
+  tmp_flush();
+
+  return 1;
+}
