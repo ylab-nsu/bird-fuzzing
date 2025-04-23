@@ -1,6 +1,6 @@
 import os
 
-class TestResults:
+class ResultsContainer:
     """Класс для хранения результатов тестов"""
     def __init__(self):
         self.results = []

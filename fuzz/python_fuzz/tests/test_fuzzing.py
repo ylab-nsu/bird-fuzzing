@@ -1,8 +1,8 @@
 import pytest
-from test_results import TestResults
-from bgp_fuzz_open_message import BGPFuzzOpenMessage
-from bgp_fuzz_notification_message import BGPFuzzNotificationMessage
-from bgp_fuzz_update_message import BgpUpdateFuzzer
+from app.test_results import ResultsContainer
+from app.bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
+from app.bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
+from app.bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
 
 @pytest.mark.open
 @pytest.mark.parametrize("fuzz_method", [

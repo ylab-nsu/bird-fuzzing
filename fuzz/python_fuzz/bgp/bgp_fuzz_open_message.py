@@ -1,6 +1,6 @@
 import random
 from boofuzz import *
-from bgp_fuzz_test import BGFuzzTest
+from .bgp_fuzz_test import BGFuzzTest
 
 BGP_HEADER_SIZE = 16
 BGP_VERSION = 0x04

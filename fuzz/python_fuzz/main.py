@@ -1,31 +1,31 @@
 import os
 import shutil
-from test_results import TestResults
+from test_results import ResultsContainer
 from bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
 from bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
 from bfd.bfd import BFDFuzzTest
 
 # Создаём объект для хранения результатов
-test_results = TestResults()
+test_results = ResultsContainer()
 
 # Fuzzing Open Message
-# bgp_test1 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test1.fuzz_bgp_open_with_optional_params()
-# bgp_test2 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test2.fuzz_bgp_open_optional_param_length()
-# bgp_test3 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test3.fuzz_bgp_open_random_params()
-# bgp_test4 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test4.fuzz_bgp_open_version_field()
-# bgp_test5 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test5.fuzz_open_asn()
-# bgp_test6 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test6.fuzz_open_hold_time()
-# bgp_test7 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test7.fuzz_open_identifier()
-# bgp_test10 = BGPFuzzOpenMessage('config.json', test_results)
-# bgp_test10.fuzz_bgp_header_without_marker()
+bgp_test1 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test1.fuzz_bgp_open_with_optional_params()
+bgp_test2 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test2.fuzz_bgp_open_optional_param_length()
+bgp_test3 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test3.fuzz_bgp_open_random_params()
+bgp_test4 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test4.fuzz_bgp_open_version_field()
+bgp_test5 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test5.fuzz_open_asn()
+bgp_test6 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test6.fuzz_open_hold_time()
+bgp_test7 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test7.fuzz_open_identifier()
+bgp_test10 = BGPFuzzOpenMessage('config.json', test_results)
+bgp_test10.fuzz_bgp_header_without_marker()
 #
 # bgp_test8 = BGPFuzzNotificationMessage('config.json', test_results)
 # bgp_test8.fuzz_notification()

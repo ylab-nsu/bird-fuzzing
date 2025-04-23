@@ -1,5 +1,5 @@
 from boofuzz import *
-from bgp_fuzz_test import BGFuzzTest
+from .bgp_fuzz_test import BGFuzzTest
 
 class BGPFuzzNotificationMessage(BGFuzzTest):
     def __init__(self, config_file, test_results, max_tests=100):
