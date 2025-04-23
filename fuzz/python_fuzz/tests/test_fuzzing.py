@@ -3,8 +3,9 @@ from app.test_results import ResultsContainer
 from app.bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from app.bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
 from app.bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
+from app.bfd.bfd import BFDFuzzTest
 
-@pytest.mark.open
+@pytest.mark.bgpOpen
 @pytest.mark.parametrize("fuzz_method", [
     "fuzz_bgp_open_with_optional_params",
     "fuzz_bgp_open_optional_param_length",
@@ -18,12 +19,12 @@ def test_fuzz_open_messages(fuzz_method, max_tests, test_results):
     bgp_test = BGPFuzzOpenMessage('config.json', test_results, max_tests=max_tests)
     getattr(bgp_test, fuzz_method)()
 
-@pytest.mark.notification
+@pytest.mark.bgpNotification
 def test_fuzz_notification(max_tests, test_results):
     bgp_test = BGPFuzzNotificationMessage('config.json', test_results, max_tests=max_tests)
     bgp_test.fuzz_notification()
 
-@pytest.mark.update
+@pytest.mark.bgpUpdate
 @pytest.mark.parametrize("fuzz_method", [
     "update_test_fuzz_withdrawn_routes_length",
     "update_test_fuzz_withdrawn_routes",
@@ -34,3 +35,8 @@ def test_fuzz_notification(max_tests, test_results):
 def test_fuzz_update_messages(fuzz_method, max_tests, test_results):
     bgp_test = BgpUpdateFuzzer('config.json', test_results, max_tests=max_tests)
     getattr(bgp_test, fuzz_method)()
+
+@pytest.mark.bfd
+def test_fuzz_bfd(max_tests, test_results):
+    bfd = BFDFuzzTest('config.json', test_results)
+    bfd.fuzz_bfd_version_field()
