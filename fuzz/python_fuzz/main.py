@@ -4,6 +4,7 @@ from test_results import ResultsContainer
 from bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
 from bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
+from bgp.bgp_fuzz_test import BGFuzz
 from bfd.bfd import BFDFuzzTest
 
 # Создаём объект для хранения результатов
@@ -37,9 +38,15 @@ bgp_test10.fuzz_bgp_header_without_marker()
 # bgp_test9.update_test_fuzz_path_attributes()
 # bgp_test9.update_test_fuzz_nlri()
 
-bfd = BFDFuzzTest('config.json', test_results)
-bfd.fuzz_bfd_version_field()
-
+bfd = BFDFuzzTest('config.json')
+bfd.fuzz_version_diag()
+bfd.fuzz_state_flags()
+bfd.fuzz_detect_mult()
+bfd.fuzz_length()
+bfd.fuzz_my_discriminator()
+bfd.fuzz_your_discriminator()
+bfd.fuzz_intervals()
+bfd.fuzz_all_fields()
 
 # Сохранение результатов
 output_dir = 'output'

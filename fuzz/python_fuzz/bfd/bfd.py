@@ -1,15 +1,21 @@
+import json
 import random
 import socket
+
+import paramiko
 from boofuzz import *
 
+from fuzz.python_fuzz.custom_logger import CustomFuzzLogger
+
 # Константы для протокола BFD
-BFD_MIN_PACKET_LEN = 24  # минимальная длина BFD Control Packet
-BFD_VERSION = 1  # стандартная версия BFD (3 бита)
-BFD_DIAG_NO_DIAG = 0  # стандартное значение поля диагностики (5 бит, например, 0)
-BFD_STATE_ADMIN_DOWN = 0  # пример состояния
+BFD_MIN_PACKET_LEN = 24
+BFD_VERSION = 1
+BFD_DIAG_NO_DIAG = 0
+BFD_STATE_ADMIN_DOWN = 0
 BFD_STATE_DOWN = 1
 BFD_STATE_INIT = 2
 BFD_STATE_UP = 3
+
 
 class CustomUDPSocketConnection(UDPSocketConnection):
     def __init__(self, host, port, ttl=255, tos=0xc0, **kwargs):
@@ -18,113 +24,203 @@ class CustomUDPSocketConnection(UDPSocketConnection):
         self.tos = tos
 
     def open(self):
-        # Создаем сокет через родительский класс
         super().open()
-        # Настраиваем параметры сокета
         self._sock.setsockopt(socket.IPPROTO_IP, socket.IP_TTL, self.ttl)
         self._sock.setsockopt(socket.IPPROTO_IP, socket.IP_TOS, self.tos)
 
 
 class BFDFuzzTest:
-    def __init__(self, config_file, max_tests=100):
+    def __init__(self, config_file=None, max_tests=100000):
+        with open(config_file, 'r') as f:
+            config = json.load(f)
         self.config_file = config_file
         self.max_tests = max_tests
+        self.BIRD_USER = 'root'
+        self.BIRD_IP = config['BIRD_BGP_ID']
+        self.BIRD_PASSWORD = 'password'
+
+        self.log_file = "logs.txt"
+        self.logger = CustomFuzzLogger(self.log_file)
+
         self.session = Session(
-            target=Target(connection=CustomUDPSocketConnection("192.168.100.10", 3784, ttl=255, tos=0xc0))
+            target=Target(connection=CustomUDPSocketConnection("192.168.100.10", 3784, ttl=255, tos=0xc0)),
+            index_start=1,
+            index_end=self.max_tests,
+            web_port=None,
+            post_test_case_callbacks=[self.print_new_logs, self.restart_uplink],
+            fuzz_loggers=[self.logger]  # Используем кастомный логгер
         )
 
     @staticmethod
-    def initialize_bfd_header(block_name):
-        """
-        Инициализация базовой части BFD Control Packet:
-        Поле 1: Vers (3 бита) и Diag (5 бит)
-        Поле 2: State (2 бита) и Flags (6 бит) – здесь будем тестировать состояние,
-                 флаги можно оставить статичными в данном примере.
-        """
+    def ip_str_to_bytes(ip):
+        """Transformation IP-address to bytes."""
+        return int.from_bytes(socket.inet_aton(ip), 'big')
+
+    def get_ssh_client(self):
+        """ Создаем и возвращаем SSH-клиент для подключения к контейнеру """
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # Доверяемся неизвестному ключу хоста
+            client.connect(self.BIRD_IP, username=self.BIRD_USER, password=self.BIRD_PASSWORD)
+            return client
+        except Exception as e:
+            print(f"Failed to connect to SSH: {e}")
+            return None
+
+    def print_new_logs(self, target=None, fuzz_data_logger=None, session=None, sock=None):
+        """Function for printing logs bird through SSH"""
+        try:
+            # Подключаемся по SSH
+            client = self.get_ssh_client()
+            if client:
+                stdin, stdout, stderr = client.exec_command(
+                    'tail -n1 /var/log/bird.log')  # Выполняем команду в контейнере
+                log_entry = stdout.read().decode().strip()  # Получаем строку из вывода
+                if log_entry:  # Если строка не пуста, выводим её
+                    # Открываем файл для дозаписи и записываем лог
+                    with open(self.log_file, "a", encoding="utf-8") as f:
+                        f.write(log_entry + "\n")
+                client.close()  # Закрываем соединение
+        except Exception as e:
+            print(f"Failed to read logs of container with bird via SSH: {e}")
+
+    def restart_uplink(self, target=None, fuzz_data_logger=None, session=None, sock=None):
+        """Function for restarting BGP protocol in container with bird via SSH"""
+        try:
+            # Подключаемся по SSH
+            client = self.get_ssh_client()
+            if client:
+                stdin, stdout, stderr = client.exec_command(
+                    f'birdc restart bfd1')  # Выполняем команду в контейнере
+                # result = stdout.read().decode().strip()
+                # if result:
+                # print(f"Restart result: {result}")
+                client.close()  # Закрываем соединение
+        except Exception as e:
+            print(f"Failed to restart BGP_PROTO_NAME via SSH: {e}")
+
+    @staticmethod
+    def _add_base_fields(block_name):
+        """Добавляет базовые поля BFD пакета с корректными значениями."""
         with s_block(block_name):
-            # Поле Vers + Diag (1 байт)
-            # Здесь упаковываем версию и диагностику в один байт:
-            # Например: (BFD_VERSION << 5) | BFD_DIAG_NO_DIAG
-            default_first_byte = (BFD_VERSION << 5) | BFD_DIAG_NO_DIAG
-            s_byte(value=default_first_byte, endian=BIG_ENDIAN, name="VersionDiag", fuzzable=False)
-            # Поле State + Flags (1 байт)
-            # Выставляем состояние + фиксированные флаги (например, 0)
-            default_second_byte = (BFD_STATE_UP << 6)  # состояние занято в старших двух битах
-            s_byte(value=default_second_byte, endian=BIG_ENDIAN, name="StateFlags", fuzzable=False)
-            # Поле Detect Mult (1 байт)
-            s_byte(value=3, endian=BIG_ENDIAN, name="Detect Mult", fuzzable=False)
-            # Поле Length (1 байт) – минимальная длина пакета
-            s_byte(value=BFD_MIN_PACKET_LEN, endian=BIG_ENDIAN, name="Length", fuzzable=False)
+            # Version + Diag (1 byte)
+            s_byte(value=(BFD_VERSION << 5) | BFD_DIAG_NO_DIAG, name="VersionDiag", fuzzable=False)
+            # State + Flags (1 byte)
+            s_byte(value=(BFD_STATE_UP << 6), name="StateFlags", fuzzable=False)
+            # Detect Mult (1 byte)
+            s_byte(value=3, name="DetectMult", fuzzable=False)
+            # Length (1 byte)
+            s_byte(value=BFD_MIN_PACKET_LEN, name="Length", fuzzable=False)
+            # My Discriminator (4 bytes)
+            s_dword(value=0x12345678, name="MyDiscriminator", fuzzable=False)
+            # Your Discriminator (4 bytes)
+            s_dword(value=0x9d3eff01, name="YourDiscriminator", fuzzable=False)
+            # Intervals (4 bytes each)
+            s_dword(value=1000000, name="DesiredMinTxInterval", fuzzable=False)
+            s_dword(value=1000000, name="RequiredMinRxInterval", fuzzable=False)
+            s_dword(value=0, name="RequiredMinEchoRxInterval", fuzzable=False)
 
-    def fuzz_bfd_control_packet(self):
-        """
-        Фуззинг BFD Control Packet.
-        Тестируем:
-         - Версию и диагностику (объединённое в один байт поле)
-         - Состояние и флаги (объединённое в один байт поле)
-         - Detect Mult – множитель обнаружения
-         - Length – длина пакета
-         - My Discriminator, Your Discriminator
-         - Интервалы: Desired Min TX, Required Min RX, Required Min Echo RX
-        """
-        s_initialize("bfd_control")
-        with s_block("BFD"):
-            self.initialize_bfd_header("Header")
-            # My Discriminator: 4 байта
-            s_dword(value=0x12345678, endian=BIG_ENDIAN, name="My Discriminator", fuzzable=True)
-            # Your Discriminator: 4 байта
-            s_dword(value=0x91195d73, endian=BIG_ENDIAN, name="Your Discriminator", fuzzable=True)
-            # Desired Min TX Interval: 4 байта (в микросекундах)
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Desired Min TX Interval", fuzzable=True)
-            # Required Min RX Interval: 4 байта (в микросекундах)
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Required Min RX Interval", fuzzable=True)
-            # Required Min Echo RX Interval: 4 байта (в микросекундах)
-            s_dword(value=0, endian=BIG_ENDIAN, name="Required Min Echo RX Interval", fuzzable=True)
+    def _add_random_field(self, name, size, max_mutations=None):
+        """Добавляет случайное поле с указанным размером."""
+        if max_mutations is None:
+            max_mutations = self.max_tests
 
-        self.session.connect(s_get("bfd_control"))
-        self.session.fuzz("bfd_control")
+        if size == 1:
+            s_random(name, min_length=1, max_length=1, num_mutations=max_mutations)
+        elif size == 4:
+            s_random(name, min_length=4, max_length=4, num_mutations=max_mutations)
+        else:
+            raise ValueError(f"Unsupported field size: {size}")
 
-    def fuzz_bfd_version_field(self):
-        """
-        Фуззинг поля Version+Diag (1 байт), чтобы проверить крайние значения и
-        некорректные комбинации.
-        """
-        s_initialize("bfd_version")
-        with s_block("BFD"):
-            # Фуззим поле VersionDiag
-            # Минимум 1 байт, максимум 1 байт, большое количество мутаций
-            s_random(value='', min_length=1, max_length=1, num_mutations=100, name="VersionDiag", fuzzable=True)
-            # Остальные поля фиксированные
-            s_static(value=b"\xC0", name="StateFlags")  # например, фиксированное состояние UP (0xC0)
-            s_static(value=b"\x03", name="DetectMult")
-            s_static(value=bytes([BFD_MIN_PACKET_LEN]), name="Length")
-            s_dword(value=0x12345678, endian=BIG_ENDIAN, name="My Discriminator", fuzzable=False)
-            s_dword(value=0x9d3eff01, endian=BIG_ENDIAN, name="Your Discriminator", fuzzable=False)
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Desired Min TX Interval", fuzzable=False)
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Required Min RX Interval", fuzzable=False)
-            s_dword(value=0, endian=BIG_ENDIAN, name="Required Min Echo RX Interval", fuzzable=False)
+    def fuzz_version_diag(self):
+        """Фуззинг поля Version + Diagnostic (1 байт)."""
+        s_initialize("BFD_FUZZ_VERSION_DIAG")
+        with s_block("BFD_HEADER"):
+            self._add_random_field("VersionDiag", 1)
+            self._add_base_fields("BFD_BASE_FIELDS")
 
-        self.session.connect(s_get("bfd_version"))
-        self.session.fuzz("bfd_version")
+        self.session.connect(s_get("BFD_FUZZ_VERSION_DIAG"))
+        self.session.fuzz()
 
-    def fuzz_bfd_discriminator_fields(self):
-        """
-        Фуззинг полей My Discriminator и Your Discriminator для проверки
-        обработки некорректных значений.
-        """
-        s_initialize("bfd_discriminators")
-        with s_block("BFD"):
-            self.initialize_bfd_header("Header")
-            # Фиксируем остальные поля
-            # My Discriminator - фуззинг
-            s_random(value='', min_length=4, max_length=4, num_mutations=100000, name="My Discriminator", fuzzable=True)
-            # Your Discriminator - фуззинг
-            s_random(value='', min_length=4, max_length=4, num_mutations=100000, name="Your Discriminator",
-                     fuzzable=True)
-            # Остальные интервалы фиксированные
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Desired Min TX Interval", fuzzable=False)
-            s_dword(value=1000000, endian=BIG_ENDIAN, name="Required Min RX Interval", fuzzable=False)
-            s_dword(value=0, endian=BIG_ENDIAN, name="Required Min Echo RX Interval", fuzzable=False)
+    def fuzz_state_flags(self):
+        """Фуззинг поля State + Flags (1 байт)."""
+        s_initialize("BFD_FUZZ_STATE_FLAGS")
+        with s_block("BFD_HEADER"):
+            s_byte((BFD_VERSION << 5) | BFD_DIAG_NO_DIAG, name="VersionDiag", fuzzable=False)
+            self._add_random_field("StateFlags", 1)
+            # Остальные базовые поля
+            s_byte(3, name="DetectMult", fuzzable=False)
+            s_byte(BFD_MIN_PACKET_LEN, name="Length", fuzzable=False)
+            self._add_base_fields("BFD_BASE_FIELDS")
 
-        self.session.connect(s_get("bfd_discriminators"))
-        self.session.fuzz("bfd_discriminators")
+        self.session.connect(s_get("BFD_FUZZ_STATE_FLAGS"))
+        self.session.fuzz()
+
+    def fuzz_detect_mult(self):
+        """Фуззинг поля Detect Multiplier (1 байт)."""
+        s_initialize("BFD_FUZZ_DETECT_MULT")
+        with s_block("BFD_HEADER"):
+            self._add_base_fields("BFD_BASE_FIELDS")
+            self._add_random_field("DetectMult", 1)
+
+        self.session.connect(s_get("BFD_FUZZ_DETECT_MULT"))
+        self.session.fuzz()
+
+    def fuzz_length(self):
+        """Фуззинг поля Length (1 байт)."""
+        s_initialize("BFD_FUZZ_LENGTH")
+        with s_block("BFD_HEADER"):
+            self._add_base_fields("BFD_BASE_FIELDS")
+            self._add_random_field("Length", 1)
+
+        self.session.connect(s_get("BFD_FUZZ_LENGTH"))
+        self.session.fuzz()
+
+    def fuzz_my_discriminator(self):
+        """Фуззинг поля My Discriminator (4 байта)."""
+        s_initialize("BFD_FUZZ_MY_DISCRIMINATOR")
+        with s_block("BFD_PAYLOAD"):
+            self._add_base_fields("BFD_BASE_FIELDS")
+            self._add_random_field("MyDiscriminator", 4)
+
+        self.session.connect(s_get("BFD_FUZZ_MY_DISCRIMINATOR"))
+        self.session.fuzz()
+
+    def fuzz_your_discriminator(self):
+        """Фуззинг поля Your Discriminator (4 байта)."""
+        s_initialize("BFD_FUZZ_YOUR_DISCRIMINATOR")
+        with s_block("BFD_PAYLOAD"):
+            self._add_base_fields("BFD_BASE_FIELDS")
+            self._add_random_field("YourDiscriminator", 4)
+
+        self.session.connect(s_get("BFD_FUZZ_YOUR_DISCRIMINATOR"))
+        self.session.fuzz()
+
+    def fuzz_intervals(self):
+        """Фуззинг всех интервалов одновременно."""
+        s_initialize("BFD_FUZZ_INTERVALS")
+        with s_block("BFD_PAYLOAD"):
+            self._add_base_fields("BFD_BASE_FIELDS")
+            self._add_random_field("DesiredMinTxInterval", 4)
+            self._add_random_field("RequiredMinRxInterval", 4)
+            self._add_random_field("RequiredMinEchoRxInterval", 4)
+
+        self.session.connect(s_get("BFD_FUZZ_INTERVALS"))
+        self.session.fuzz()
+
+    def fuzz_all_fields(self):
+        """Фуззинг всех полей одновременно."""
+        s_initialize("BFD_FUZZ_ALL_FIELDS")
+        with s_block("BFD_HEADER"):
+            self._add_random_field("VersionDiag", 1)
+            self._add_random_field("StateFlags", 1)
+            self._add_random_field("DetectMult", 1)
+            self._add_random_field("Length", 1)
+            self._add_random_field("MyDiscriminator", 4)
+            self._add_random_field("YourDiscriminator", 4)
+            self._add_random_field("DesiredMinTxInterval", 4)
+            self._add_random_field("RequiredMinRxInterval", 4)
+            self._add_random_field("RequiredMinEchoRxInterval", 4)
+
+        self.session.connect(s_get("BFD_FUZZ_ALL_FIELDS"))
+        self.session.fuzz()
