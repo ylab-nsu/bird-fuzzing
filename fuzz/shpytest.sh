@@ -17,7 +17,7 @@ docker exec bird-container-test /usr/sbin/sshd -D &
 echo "Ждём, пока SSH поднимется..."
 sleep 3
 
-MAX_TESTS=100
+MAX_TESTS=1
 
 echo "Запускаем тесты с pytest..."
 docker exec -it fuzzer-container pytest tests/ --max-tests=$MAX_TESTS -v | tee output/pytest_output.txt

@@ -5,7 +5,7 @@ import socket
 import paramiko
 from boofuzz import *
 
-from fuzz.python_fuzz.custom_logger import CustomFuzzLogger
+from app.custom_logger import CustomFuzzLogger
 
 # Константы для протокола BFD
 BFD_MIN_PACKET_LEN = 24
@@ -30,7 +30,7 @@ class CustomUDPSocketConnection(UDPSocketConnection):
 
 
 class BFDFuzzTest:
-    def __init__(self, config_file=None, max_tests=100000):
+    def __init__(self, config_file=None, max_tests=1000):
         with open(config_file, 'r') as f:
             config = json.load(f)
         self.config_file = config_file

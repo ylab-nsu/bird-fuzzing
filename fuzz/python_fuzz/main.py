@@ -4,8 +4,9 @@ from test_results import ResultsContainer
 from bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
 from bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
-from bgp.bgp_fuzz_test import BGFuzz
+from bgp.bgp_fuzz_test import BGFuzzTest
 from bfd.bfd import BFDFuzzTest
+
 
 # Создаём объект для хранения результатов
 test_results = ResultsContainer()

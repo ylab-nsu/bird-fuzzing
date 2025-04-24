@@ -37,6 +37,16 @@ def test_fuzz_update_messages(fuzz_method, max_tests, test_results):
     getattr(bgp_test, fuzz_method)()
 
 @pytest.mark.bfd
-def test_fuzz_bfd(max_tests, test_results):
-    bfd = BFDFuzzTest('config.json', test_results)
-    bfd.fuzz_bfd_version_field()
+@pytest.mark.parametrize("fuzz_method", [
+    "fuzz_version_diag",
+    "fuzz_state_flags",
+    "fuzz_detect_mult",
+    "fuzz_length",
+    "fuzz_my_discriminator",
+    "fuzz_your_discriminator",
+    "fuzz_intervals",
+    "fuzz_all_fields"
+])
+def test_fuzz_bfd_messages(fuzz_method, max_tests, test_results):
+    bfd_test = BFDFuzzTest('config.json', max_tests=max_tests)
+    getattr(bfd_test, fuzz_method)()
