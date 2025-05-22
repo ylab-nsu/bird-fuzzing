@@ -1,12 +1,9 @@
 import json
 import socket
-import time
-from datetime import datetime
 import paramiko
 from boofuzz import *
 from app.custom_logger import CustomFuzzLogger
 
-# Константы для протокола BFD
 BFD_MIN_PACKET_LEN = 24
 BFD_VERSION = 1
 BFD_DIAG_NO_DIAG = 0
@@ -42,12 +39,12 @@ class BFDFuzzTest:
         self.logger = CustomFuzzLogger(self.log_file)
         self.server_my_disc = self._get_discriminator_passively()
         if self.server_my_disc is None:
-            raise RuntimeError("Не удалось получить BFD дискриминатор от сервера")
+            raise RuntimeError("Failed to get BFD Discriminator from server")
 
         self.my_discriminator = 0x20c00318
 
-        print(f"[+] Серверный My Discriminator: 0x{self.server_my_disc:08X}")
-        print(f"[+] Наш My Discriminator: 0x{self.my_discriminator:08X}")
+        print(f"[+] Server's My Discriminator: 0x{self.server_my_disc:08X}")
+        print(f"[+] Our My Discriminator: 0x{self.my_discriminator:08X}")
 
         self.session = Session(
             target=Target(connection=CustomUDPSocketConnection("192.168.100.10", 3784, ttl=255, tos=0xc0)),
@@ -59,7 +56,7 @@ class BFDFuzzTest:
         )
 
     def get_ssh_client(self):
-        """ Создаем и возвращаем SSH-клиент для подключения к контейнеру """
+        """Function for printing logs bird through SSH"""
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())  # Доверяемся неизвестному ключу хоста
@@ -76,33 +73,28 @@ class BFDFuzzTest:
             client = self.get_ssh_client()
             if client:
                 stdin, stdout, stderr = client.exec_command(
-                    'tail -n1 /var/log/bird.log')  # Выполняем команду в контейнере
-                log_entry = stdout.read().decode().strip()  # Получаем строку из вывода
-                if log_entry:  # Если строка не пуста, выводим её
-                    # Открываем файл для дозаписи и записываем лог
+                    'tail -n1 /var/log/bird.log')
+                log_entry = stdout.read().decode().strip()
+                if log_entry:
                     with open(self.log_file, "a", encoding="utf-8") as f:
                         f.write(log_entry + "\n")
-                client.close()  # Закрываем соединение
+                client.close()
         except Exception as e:
             print(f"Failed to read logs of container with bird via SSH: {e}")
 
     def restart_uplink(self, target=None, fuzz_data_logger=None, session=None, sock=None):
         """Function for restarting BGP protocol in container with bird via SSH"""
         try:
-            # Подключаемся по SSH
             client = self.get_ssh_client()
             if client:
                 stdin, stdout, stderr = client.exec_command(
-                    f'birdc restart bfd1')  # Выполняем команду в контейнере
-                # result = stdout.read().decode().strip()
-                # if result:
-                # print(f"Restart result: {result}")
-                client.close()  # Закрываем соединение
+                    f'birdc restart bfd1')
+                client.close()
         except Exception as e:
             print(f"Failed to restart BGP_PROTO_NAME via SSH: {e}")
 
     def _get_discriminator_passively(self, timeout=10, retries=3):
-        """Пассивное получение серверного My Discriminator"""
+        """Passive getting server's Discriminator"""
         for attempt in range(retries):
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
@@ -114,17 +106,17 @@ class BFDFuzzTest:
                         server_my_disc = int.from_bytes(data[4:8], 'big')
                         return server_my_disc
                     else:
-                        print("[!] Получен некорректный BFD пакет")
+                        print("[!]Got incorrect BFD packet")
             except socket.timeout:
-                print(f"[{attempt + 1}/{retries}] Таймаут ожидания BFD пакета")
+                print(f"[{attempt + 1}/{retries}] Timeout waiting for BFD packet")
             except Exception as e:
-                print(f"[!] Ошибка: {str(e)}")
+                print(f"[!] Error: {str(e)}")
 
         return None
 
     @staticmethod
     def _is_valid_bfd_packet(data):
-        """Проверка валидности BFD пакета"""
+        """Validation BFD packet"""
         if len(data) < 24:
             return False
         version = (data[0] >> 5) & 0x07
@@ -132,7 +124,7 @@ class BFDFuzzTest:
         return version == 1 and length >= 24
 
     def fuzz_version_diag(self):
-        """Фуззинг поля Version + Diagnostic (1 байт)"""
+        """Fuzzing Version + Diagnostic(1 byte)"""
         s_initialize("BFD_FUZZ_VERSION_DIAG")
 
         with s_block("BFD_HEADER"):
@@ -150,7 +142,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_state_flags(self):
-        """Фуззинг поля State + Flags (1 байт) с корректной структурой пакета"""
+        """Fuzzing State + Flags (1 byte) with correct packet structure"""
         s_initialize("BFD_FUZZ_STATE_FLAGS")
 
         with s_block("BFD_HEADER"):
@@ -169,7 +161,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_detect_mult(self):
-        """Фуззинг поля Detect Multiplier (1 байт)"""
+        """Fuzzing Detect Multiplier (1 byte)"""
         s_initialize("BFD_FUZZ_DETECT_MULT")
 
         with s_block("BFD_HEADER"):
@@ -188,7 +180,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_length(self):
-        """Фуззинг поля Length (1 байт)"""
+        """Fuzzing Length (1 byte)"""
         s_initialize("BFD_FUZZ_LENGTH")
 
         with s_block("BFD_HEADER"):
@@ -207,7 +199,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_my_discriminator(self):
-        """Фуззинг поля My Discriminator (4 байта)"""
+        """Fuzzing My Discriminator (4 bytes)"""
         s_initialize("BFD_FUZZ_MY_DISCRIMINATOR")
 
         with s_block("BFD_PAYLOAD"):
@@ -226,7 +218,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_your_discriminator(self):
-        """Фуззинг поля Your Discriminator (4 байта)"""
+        """Fuzzing Your Discriminator (4 bytes)"""
         s_initialize("BFD_FUZZ_YOUR_DISCRIMINATOR")
 
         with s_block("BFD_PAYLOAD"):
@@ -245,7 +237,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_intervals(self):
-        """Фуззинг всех интервалов одновременно"""
+        """Fuzzing all intervals"""
         s_initialize("BFD_FUZZ_INTERVALS")
 
         with s_block("BFD_PAYLOAD"):
@@ -264,7 +256,7 @@ class BFDFuzzTest:
         self.session.fuzz()
 
     def fuzz_all_fields(self):
-        """Фуззинг всех полей одновременно"""
+        """Fuzzing all fields"""
         s_initialize("BFD_FUZZ_ALL_FIELDS")
 
         with s_block("BFD_HEADER"):

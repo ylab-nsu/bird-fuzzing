@@ -1,5 +1,7 @@
 import os
 import shutil
+
+from rip.rip import RIPFuzzTest
 from test_results import ResultsContainer
 from bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
@@ -39,22 +41,29 @@ test_results = ResultsContainer()
 # bgp_test9.update_test_fuzz_path_attributes()
 # bgp_test9.update_test_fuzz_nlri()
 
-bfd = BFDFuzzTest('config.json', max_tests=10)
-bfd.fuzz_version_diag()
-bfd1 = BFDFuzzTest('config.json', max_tests=10)
-bfd1.fuzz_state_flags()
-bfd2 = BFDFuzzTest('config.json', max_tests=10)
-bfd2.fuzz_detect_mult()
-bfd3 = BFDFuzzTest('config.json', max_tests=10)
-bfd3.fuzz_length()
-bfd4 = BFDFuzzTest('config.json', max_tests=10)
-bfd4.fuzz_my_discriminator()
-bfd5 = BFDFuzzTest('config.json', max_tests=10)
-bfd5.fuzz_your_discriminator()
-bfd6 = BFDFuzzTest('config.json', max_tests=10)
-bfd6.fuzz_intervals()
-bfd7 = BFDFuzzTest('config.json', max_tests=10)
-bfd7.fuzz_all_fields()
+# bfd = BFDFuzzTest('config.json', max_tests=10)
+# bfd.fuzz_version_diag()
+# bfd1 = BFDFuzzTest('config.json', max_tests=10)
+# bfd1.fuzz_state_flags()
+# bfd2 = BFDFuzzTest('config.json', max_tests=10)
+# bfd2.fuzz_detect_mult()
+# bfd3 = BFDFuzzTest('config.json', max_tests=10)
+# bfd3.fuzz_length()
+# bfd4 = BFDFuzzTest('config.json', max_tests=10)
+# bfd4.fuzz_my_discriminator()
+# bfd5 = BFDFuzzTest('config.json', max_tests=10)
+# bfd5.fuzz_your_discriminator()
+# bfd6 = BFDFuzzTest('config.json', max_tests=10)
+# bfd6.fuzz_intervals()
+# bfd7 = BFDFuzzTest('config.json', max_tests=10)
+# bfd7.fuzz_all_fields()
+
+rip = RIPFuzzTest(config_file='config.json', max_tests=10)
+rip.fuzz_authentication()
+rip.fuzz_metric()
+rip.fuzz_command_version()
+rip.fuzz_route_entries()
+rip.fuzz_malformed_packets()
 
 # Сохранение результатов
 output_dir = 'output'
