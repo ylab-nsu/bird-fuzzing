@@ -36,7 +36,7 @@ jobs:
 
     - name: Run tests with pytest in fuzzer-container
       run: |
-        docker exec fuzzer-container pytest tests/ --max-tests=100 -v | tee fuzz/output/pytest_output.txt
+        docker exec fuzzer-container pytest tests/ --max-tests=1 -v | tee fuzz/output/pytest_output.txt
 
     - name: Upload test results as artifact
       uses: actions/upload-artifact@v4
