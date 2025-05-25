@@ -33,6 +33,9 @@ def pytest_sessionfinish(session, exitstatus):
     logs_file = 'logs.txt'
     if os.path.exists(logs_file):
         shutil.move(logs_file, os.path.join(output_dir, logs_file))
+    bfd_logs_file = 'bfd_fuzz_logs.txt'
+    if os.path.exists(bfd_logs_file):
+        shutil.move(bfd_logs_file, os.path.join(output_dir, bfd_logs_file))
 
     # Перемещение результатов boofuzz
     results_dir = 'boofuzz-results'
