@@ -14,7 +14,7 @@ RIP_VERSION = 2
 
 
 class CustomUDPSocketConnection(UDPSocketConnection):
-    def __init__(self, host, port, ttl=1, tos=0xc0, **kwargs):
+    def __init__(self, host, port, ttl=1, tos=0xC0, **kwargs):
         super().__init__(host=host, port=port, **kwargs)
         self.ttl = ttl
         self.tos = tos
@@ -27,43 +27,53 @@ class CustomUDPSocketConnection(UDPSocketConnection):
 
 class RIPFuzzTest:
     def __init__(self, config_file=None, max_tests=1000):
-        with open(config_file, 'r') as f:
+        with open(config_file, "r") as f:
             config = json.load(f)
 
         self.config_file = config_file
         self.max_tests = max_tests
-        self.BIRD_USER = 'root'
-        self.BIRD_IP = config['BIRD_RIP_ID']
-        self.BIRD_PASSWORD = 'password'
+        self.BIRD_USER = "root"
+        self.BIRD_IP = config["BIRD_RIP_ID"]
+        self.BIRD_PASSWORD = "password"
         self.log_file = "rip_fuzz_logs.txt"
         self.logger = CustomFuzzLogger(self.log_file)
 
         self.session = Session(
-            target=Target(connection=CustomUDPSocketConnection("192.168.100.10", RIP_PORT, ttl=1, tos=0xc0)),
+            target=Target(
+                connection=CustomUDPSocketConnection(
+                    "192.168.100.10", RIP_PORT, ttl=1, tos=0xC0
+                )
+            ),
             index_start=1,
             index_end=self.max_tests,
             web_port=None,
             post_test_case_callbacks=[self.print_new_logs, self.restart_rip],
-            fuzz_loggers=[self.logger]
+            fuzz_loggers=[self.logger],
         )
 
     def get_ssh_client(self):
-        """ Make and return SSH-client for connection to Docker container"""
+        """Make and return SSH-client for connection to Docker container"""
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(self.BIRD_IP, username=self.BIRD_USER, password=self.BIRD_PASSWORD)
+            client.connect(
+                self.BIRD_IP, username=self.BIRD_USER, password=self.BIRD_PASSWORD
+            )
             return client
         except Exception as e:
             print(f"SSH Connection Error: {e}")
             return None
 
-    def print_new_logs(self, target=None, fuzz_data_logger=None, session=None, sock=None):
+    def print_new_logs(
+        self, target=None, fuzz_data_logger=None, session=None, sock=None
+    ):
         """Function for printing logs bird through SSH"""
         try:
             client = self.get_ssh_client()
             if client:
-                stdin, stdout, stderr = client.exec_command('tail -n5 /var/log/bird.log')
+                stdin, stdout, stderr = client.exec_command(
+                    "tail -n5 /var/log/bird.log"
+                )
                 logs = stdout.read().decode().strip()
                 if logs:
                     with open(self.log_file, "a", encoding="utf-8") as f:
@@ -77,7 +87,7 @@ class RIPFuzzTest:
         try:
             client = self.get_ssh_client()
             if client:
-                stdin, stdout, stderr = client.exec_command('birdc restart rip1')
+                stdin, stdout, stderr = client.exec_command("birdc restart rip1")
                 client.close()
         except Exception as e:
             print(f"Protocol Restart Error: {e}")
@@ -87,8 +97,12 @@ class RIPFuzzTest:
         s_initialize("RIP_FUZZ_CMD_VER")
 
         with s_block("RIP_Header"):
-            s_random("command", min_length=1, max_length=1, num_mutations=self.max_tests)
-            s_random("version", min_length=1, max_length=1, num_mutations=self.max_tests)
+            s_random(
+                "command", min_length=1, max_length=1, num_mutations=self.max_tests
+            )
+            s_random(
+                "version", min_length=1, max_length=1, num_mutations=self.max_tests
+            )
             s_static(b"\x00\x00", name="zero_field")  # 2 нулевых байта
 
         # Добавляем одну валидную запись
@@ -108,14 +122,16 @@ class RIPFuzzTest:
         s_initialize("RIP_FUZZ_AUTH")
 
         with s_block("RIP_Header"):
-            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, 'big'), name="command")
-            s_static(RIP_VERSION.to_bytes(1, 'big'), name="version")
+            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, "big"), name="command")
+            s_static(RIP_VERSION.to_bytes(1, "big"), name="version")
             s_static(b"\x00\x00", name="zero_field")
 
         with s_block("Auth_Entry"):
             s_static(b"\xff\xff", name="Auth_AFI")  # 0xFFFF для аутентификации
             s_random("Auth_Type", min_length=2, max_length=2, num_mutations=10)
-            s_random("Auth_Data", min_length=16, max_length=16, num_mutations=self.max_tests)
+            s_random(
+                "Auth_Data", min_length=16, max_length=16, num_mutations=self.max_tests
+            )
 
         self.session.connect(s_get("RIP_FUZZ_AUTH"))
         self.session.fuzz()
@@ -125,8 +141,8 @@ class RIPFuzzTest:
         s_initialize("RIP_FUZZ_METRIC")
 
         with s_block("RIP_Header"):
-            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, 'big'), name="command")
-            s_static(RIP_VERSION.to_bytes(1, 'big'), name="version")
+            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, "big"), name="command")
+            s_static(RIP_VERSION.to_bytes(1, "big"), name="version")
             s_static(b"\x00\x00", name="zero_field")
 
         # Добавляем 25 записей (максимум для одного пакета)
@@ -137,7 +153,9 @@ class RIPFuzzTest:
                 s_static(b"\xc0\xa8\x01\x00")
                 s_static(b"\xff\xff\xff\x00", name="Subnet_Mask")
                 s_static(b"\x00\x00\x00\x00", name="Next_Hop")
-                s_random("Metric", min_length=4, max_length=4, num_mutations=self.max_tests)
+                s_random(
+                    "Metric", min_length=4, max_length=4, num_mutations=self.max_tests
+                )
 
         self.session.connect(s_get("RIP_FUZZ_METRIC"))
         self.session.fuzz()
@@ -147,8 +165,8 @@ class RIPFuzzTest:
         s_initialize("RIP_FUZZ_ENTRIES")
 
         with s_block("RIP_Header"):
-            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, 'big'), name="command")
-            s_static(RIP_VERSION.to_bytes(1, 'big'), name="version")
+            s_static(RIP_COMMAND_RESPONSE.to_bytes(1, "big"), name="command")
+            s_static(RIP_VERSION.to_bytes(1, "big"), name="version")
             s_static(b"\x00\x00", name="zero_field")
 
         with s_block("RIP_Entry"):
@@ -165,6 +183,8 @@ class RIPFuzzTest:
     def fuzz_malformed_packets(self):
         """Генерация полностью искаженных пакетов"""
         s_initialize("RIP_FUZZ_MALFORMED")
-        s_random("full_packet", min_length=4, max_length=512, num_mutations=self.max_tests)
+        s_random(
+            "full_packet", min_length=4, max_length=512, num_mutations=self.max_tests
+        )
         self.session.connect(s_get("RIP_FUZZ_MALFORMED"))
         self.session.fuzz()

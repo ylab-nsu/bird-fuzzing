@@ -58,7 +58,7 @@ test_results = ResultsContainer()
 # bfd7 = BFDFuzzTest('config.json', max_tests=10)
 # bfd7.fuzz_all_fields()
 
-rip = RIPFuzzTest(config_file='config.json', max_tests=10)
+rip = RIPFuzzTest(config_file="config.json", max_tests=10)
 rip.fuzz_authentication()
 rip.fuzz_metric()
 rip.fuzz_command_version()
@@ -66,16 +66,16 @@ rip.fuzz_route_entries()
 rip.fuzz_malformed_packets()
 
 # Сохранение результатов
-output_dir = 'output'
+output_dir = "output"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 test_results.generate_html_report(output_dir=output_dir)
 
-logs_file = 'logs.txt'
+logs_file = "logs.txt"
 if os.path.exists(logs_file):
     shutil.move(logs_file, os.path.join(output_dir, logs_file))
 
-results_dir = 'boofuzz-results'
+results_dir = "boofuzz-results"
 if os.path.exists(results_dir):
     shutil.move(results_dir, os.path.join(output_dir, results_dir))
