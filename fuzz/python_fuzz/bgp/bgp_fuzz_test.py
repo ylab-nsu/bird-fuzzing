@@ -43,11 +43,25 @@ class BGFuzzTest:
 
     def fuzz(self, name):
         start_time = time.time()
-        self.session.fuzz()
-        status = "Success"
+        max_retries = 3
+        attempt = 0
+        status = "Failed"
+
+        while attempt < max_retries:
+            try:
+                self.session.fuzz()
+                status = "Success"
+                break
+            except Exception as e:
+                status = f"Failed: {e}"
+                attempt += 1
+                print(f"Attempt {attempt} failed: {e}")
+        if status == "Failed":
+            raise "some went wrong with connection"
         elapsed_time = time.time() - start_time
         self.test_results.add_result(name, status, self.max_tests, str(elapsed_time))
         print(f"Test {name} {self.max_tests} {status} {elapsed_time:.2f} seconds")
+
         # try:
         #     self.session.fuzz()
         #     status = "Success"
