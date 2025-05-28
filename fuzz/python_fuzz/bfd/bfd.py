@@ -2,7 +2,7 @@ import json
 import socket
 import paramiko
 from boofuzz import *
-from app.custom_logger import CustomFuzzLogger
+from custom_logger import CustomFuzzLogger
 
 BFD_MIN_PACKET_LEN = 24
 BFD_VERSION = 1
@@ -42,9 +42,6 @@ class BFDFuzzTest:
             raise RuntimeError("Failed to get BFD Discriminator from server")
 
         self.my_discriminator = 0x20C00318
-
-        print(f"[+] Server's My Discriminator: 0x{self.server_my_disc:08X}")
-        print(f"[+] Our My Discriminator: 0x{self.my_discriminator:08X}")
 
         self.session = Session(
             target=Target(
