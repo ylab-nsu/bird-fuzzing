@@ -1,5 +1,6 @@
 import paramiko
 
+
 def execute_command(host, port, username, password, command):
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -12,9 +13,10 @@ def execute_command(host, port, username, password, command):
     ssh.close()
     return output, error
 
+
 if __name__ == "__main__":
     # Настройки подключения
-    host = '172.18.0.2'  # IP bird-контейнера
+    host = "172.18.0.2"  # IP bird-контейнера
     port = 22
     username = "root"
     password = "password"

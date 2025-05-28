@@ -1,5 +1,6 @@
 from boofuzz import IFuzzLogger
 
+
 class CustomFuzzLogger(IFuzzLogger):
     def __init__(self, log_file):
         self.log_file = log_file
@@ -32,11 +33,11 @@ class CustomFuzzLogger(IFuzzLogger):
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(f"Check: {description}\n")
 
-    def log_pass(self, description=''):
+    def log_pass(self, description=""):
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(f"Check Passed: {description}\n")
 
-    def log_fail(self, description=''):
+    def log_fail(self, description=""):
         with open(self.log_file, "a", encoding="utf-8") as f:
             f.write(f"Check Failed: {description}\n")
 
@@ -49,4 +50,3 @@ class CustomFuzzLogger(IFuzzLogger):
 
     def close_test(self):
         pass
-

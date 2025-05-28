@@ -3,41 +3,49 @@ platform linux -- Python 3.10.17, pytest-8.3.5, pluggy-1.6.0 -- /usr/local/bin/p
 cachedir: .pytest_cache
 rootdir: /app
 configfile: pytest.ini
-[1mcollecting ... [0m[1mcollected 21 items                                                             [0m
+[1mcollecting ... [0m[1mcollected 29 items                                                             [0m
 
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_with_optional_params] [32mPASSED[0m[32m [  4%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_optional_param_length] [32mPASSED[0m[32m [  9%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_random_params] [32mPASSED[0m[32m [ 14%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_version_field] [32mPASSED[0m[32m [ 19%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_asn] [32mPASSED[0m[32m     [ 23%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_hold_time] [32mPASSED[0m[32m [ 28%][0m
-tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_identifier] [32mPASSED[0m[32m [ 33%][0m
-tests/test_fuzzing.py::test_fuzz_notification [32mPASSED[0m[32m                     [ 38%][0m
-tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes_length] [32mPASSED[0m[32m [ 42%][0m
-tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes] [32mPASSED[0m[32m [ 47%][0m
-tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes_length] [32mPASSED[0m[32m [ 52%][0m
-tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes] [32mPASSED[0m[32m [ 57%][0m
-tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_nlri] [32mPASSED[0m[32m [ 61%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_version_diag] [32mPASSED[0m[32m  [ 66%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_state_flags] [32mPASSED[0m[32m   [ 71%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_detect_mult] [32mPASSED[0m[32m   [ 76%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_length] [32mPASSED[0m[32m        [ 80%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_my_discriminator] [32mPASSED[0m[32m [ 85%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_your_discriminator] [32mPASSED[0m[32m [ 90%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_intervals] [32mPASSED[0m[32m     [ 95%][0m
-tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_all_fields] [32mPASSED[0m[32m    [100%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_with_optional_params] [32mPASSED[0m[32m [  3%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_optional_param_length] [32mPASSED[0m[32m [  6%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_random_params] [32mPASSED[0m[32m [ 10%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_bgp_open_version_field] [32mPASSED[0m[32m [ 13%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_asn] [32mPASSED[0m[32m     [ 17%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_hold_time] [32mPASSED[0m[32m [ 20%][0m
+tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_identifier] [32mPASSED[0m[32m [ 24%][0m
+tests/test_fuzzing.py::test_fuzz_notification [32mPASSED[0m[32m                     [ 27%][0m
+tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes_length] [32mPASSED[0m[32m [ 31%][0m
+tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes] [32mPASSED[0m[32m [ 34%][0m
+tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes_length] [32mPASSED[0m[32m [ 37%][0m
+tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes] [32mPASSED[0m[32m [ 41%][0m
+tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_nlri] [32mPASSED[0m[32m [ 44%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_version_diag] [32mPASSED[0m[32m  [ 48%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_state_flags] [32mPASSED[0m[32m   [ 51%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_detect_mult] [32mPASSED[0m[32m   [ 55%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_length] [32mPASSED[0m[32m        [ 58%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_my_discriminator] [32mPASSED[0m[32m [ 62%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_your_discriminator] [32mPASSED[0m[32m [ 65%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_intervals] [32mPASSED[0m[32m     [ 68%][0m
+tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_all_fields] [32mPASSED[0m[32m    [ 72%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_authentication] [32mPASSED[0m[32m [ 75%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_metric] [32mPASSED[0m[32m        [ 79%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_command_version] [32mPASSED[0m[32m [ 82%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_route_entries] [32mPASSED[0m[32m [ 86%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_malformed_packets] [32mPASSED[0m[32m [ 89%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_afi] [32mPASSED[0m[32m           [ 93%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_ip_address] [32mPASSED[0m[32m    [ 96%][0m
+tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_mask] [32mPASSED[0m[32m          [100%][0m
 ✅ Результаты тестов сохранены в output/
 
 
 ============================= slowest 10 durations =============================
-0.96s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_version_diag]
-0.33s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_your_discriminator]
-0.32s call     tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes_length]
-0.31s call     tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes]
-0.31s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_intervals]
-0.31s call     tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_identifier]
-0.31s call     tests/test_fuzzing.py::test_fuzz_notification
-0.31s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_detect_mult]
-0.31s call     tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_path_attributes_length]
-0.31s call     tests/test_fuzzing.py::test_fuzz_open_messages[fuzz_open_hold_time]
-[32m============================== [32m[1m21 passed[0m[32m in 7.21s[0m[32m ==============================[0m
+0.48s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_version_diag]
+0.34s call     tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_malformed_packets]
+0.32s call     tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_mask]
+0.32s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_your_discriminator]
+0.32s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_detect_mult]
+0.32s call     tests/test_fuzzing.py::test_fuzz_bfd_messages[fuzz_my_discriminator]
+0.31s call     tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_afi]
+0.31s call     tests/test_fuzzing.py::test_fuzz_rip_messages[fuzz_metric]
+0.31s call     tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_nlri]
+0.31s call     tests/test_fuzzing.py::test_fuzz_update_messages[update_test_fuzz_withdrawn_routes]
+[32m============================== [32m[1m29 passed[0m[32m in 9.35s[0m[32m ==============================[0m
