@@ -4,6 +4,7 @@ from app.bgp.bgp_fuzz_open_message import BGPFuzzOpenMessage
 from app.bgp.bgp_fuzz_notification_message import BGPFuzzNotificationMessage
 from app.bgp.bgp_fuzz_update_message import BgpUpdateFuzzer
 from app.bfd.bfd import BFDFuzzTest
+from app.rip.rip import RIPFuzzTest
 
 
 @pytest.mark.bgpOpen
@@ -65,3 +66,21 @@ def test_fuzz_update_messages(fuzz_method, max_tests, test_results):
 def test_fuzz_bfd_messages(fuzz_method, max_tests, test_results):
     bfd_test = BFDFuzzTest("config.json", max_tests=max_tests)
     getattr(bfd_test, fuzz_method)()
+
+@pytest.mark.rip
+@pytest.mark.parametrize(
+    "fuzz_method",
+    [
+        "fuzz_authentication",
+        "fuzz_metric",
+        "fuzz_command_version",
+        "fuzz_route_entries",
+        "fuzz_malformed_packets",
+        "fuzz_afi",
+        "fuzz_ip_address",
+        "fuzz_mask",
+    ],
+)
+def test_fuzz_rip_messages(fuzz_method, max_tests, test_results):
+    rip_test = RIPFuzzTest(config_file="config.json", max_tests=max_tests)
+    getattr(rip_test, fuzz_method)()

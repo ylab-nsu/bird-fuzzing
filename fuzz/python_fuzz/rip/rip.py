@@ -2,7 +2,7 @@ import json
 import socket
 import paramiko
 from boofuzz import *
-from custom_logger import CustomFuzzLogger
+from app.custom_logger import CustomFuzzLogger
 
 # Constants for RIP
 RIP_PORT = 520

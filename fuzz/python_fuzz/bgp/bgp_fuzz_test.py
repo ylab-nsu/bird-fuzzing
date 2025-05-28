@@ -4,7 +4,7 @@ import time
 from boofuzz import Session, Target, TCPSocketConnection
 import json
 import paramiko
-from custom_logger import CustomFuzzLogger
+from app.custom_logger import CustomFuzzLogger
 
 
 class BGFuzzTest:
